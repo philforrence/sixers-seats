@@ -1,0 +1,9 @@
+{
+  "name": "sixers-seats",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node scripts/serve.mjs 8080",
+    "prices": "node scripts/fetch-prices.mjs"
+  }
+}
