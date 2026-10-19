@@ -148,7 +148,7 @@ textarea { resize: vertical; }
 /* ---------- Home */
 .hero { cursor: pointer; background: linear-gradient(135deg, var(--navy), var(--blue) 70%); color: #fff; border: 0; position: relative; overflow: hidden; }
 .hero::after { content: ""; position: absolute; right: -60px; top: -60px; width: 240px; height: 240px; border-radius: 50%; border: 28px solid rgba(255,255,255,.06); }
-.hero .eyebrow, .hero .label, .hero p { color: rgba(255,255,255,.75); }
+.hero .eyebrow, .hero .label, .hero p, .hero .muted { color: rgba(255,255,255,.75); }
 .hero h1 { font-size: 34px; }
 .hero-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
 .hero .chip { background: rgba(255,255,255,.18); color: #fff; }
