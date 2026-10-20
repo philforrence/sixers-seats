@@ -596,25 +596,24 @@ function sellView() {
   <p class="muted small legend-p">Pick a game and hit <b>Pitch</b> to get a text, email or board post with today's price filled in. Friend price is what similar seats cost online with fees included; F&amp;F takes ${pct}% off (rounded down to $5). One game per person, and the ask is a simple yes or no.</p>`;
 }
 
-// The seat-view link: RateYourSeats' Section 201 page, whose preview image is the basketball view from 201.
-const viewUrl = () => state.settings.seatViewUrl || 'https://www.rateyourseats.com/xfinity-mobile-arena/seating/sections/201';
-const viewLine = () => `The view from our section: ${viewUrl()}`;
-function withView(text, on) {
-  const line = viewLine();
-  const parts = String(text).split('\n\n').filter(x => x.trim() !== line);
-  if (on) {
-    // Emails: put the link just above the sign-off. Texts and posts: at the end.
-    if (/^Subject:/.test(parts[0]) && parts.length > 3) parts.splice(parts.length - 1, 0, line); else parts.push(line);
-  }
-  return parts.join('\n\n');
-}
-// Prefetch the seat picture so "Share" can attach it inside the tap (iOS needs that).
+// Our seat-view photo (seat-view.jpg, Phil's photo from the seats). Loaded when a pitch opens so Share / Copy can use it inside the tap,
+// which iOS requires. Safari's clipboard only takes PNG, so we keep a PNG copy too.
+const PHOTO = () => state.settings.seatPhoto || 'seat-view.jpg';
 async function loadViewFile() {
   if (state.viewFile) return;
   try {
-    const r = await fetch(state.settings.seatPhoto || 'view.jpg', { cache: 'force-cache' });
-    if (r.ok) { state.viewFile = new File([await r.blob()], 'sixers-sec-201-row-2.jpg', { type: 'image/jpeg' }); if (state.pitch) renderModal(); }
-  } catch {}
+    const blob = await fetch(PHOTO(), { cache: 'no-cache' }).then(r => r.ok ? r.blob() : null);
+    if (!blob) return;
+    state.viewFile = new File([blob], 'view-from-sec-201-row-2.jpg', { type: 'image/jpeg' });
+    const bmp = await createImageBitmap(blob), cv = document.createElement('canvas');
+    cv.width = bmp.width; cv.height = bmp.height; cv.getContext('2d').drawImage(bmp, 0, 0);
+    state.viewPng = await new Promise(r => cv.toBlob(r, 'image/png'));
+    if (state.pitch) renderModal();
+  } catch (e) { console.warn('seat photo', e); }
+}
+async function copyPhoto() {
+  if (!state.viewPng || !window.ClipboardItem || !navigator.clipboard?.write) return false;
+  try { await navigator.clipboard.write([new ClipboardItem({ 'image/png': state.viewPng })]); return true; } catch { return false; }
 }
 
 function pitchModal() {
@@ -624,12 +623,9 @@ function pitchModal() {
   const pr = pitchPrices(g, P.step, P.pct);
   const contacts = state.contacts || [];
   const c = contacts.find(x => x.id === P.contactId);
-  if (!P.dirty) P.text = withView(buildMessage(g, { type: P.type, variant: P.variant, price: pr.friend, ff: P.variant === 'come' ? pr.ff : pr.ff, pct: P.pct, hook: hookFor(g), name: c?.name, n: P.n }), P.view);
-  const canShare = !!state.viewFile && !!navigator.canShare?.({ files: [state.viewFile] });
+  if (!P.dirty) P.text = buildMessage(g, { type: P.type, variant: P.variant, price: pr.friend, ff: P.variant === 'come' ? pr.ff : pr.ff, pct: P.pct, hook: hookFor(g), name: c?.name, n: P.n });
+  const canShare = P.photo && !!state.viewFile && !!navigator.canShare?.({ files: [state.viewFile] });
   const groups = [...new Set(contacts.map(x => x.group || 'Other'))];
-  const email = splitEmail(P.text);
-  const smsHref = c?.phone ? `sms:${c.phone.replace(/[^\d+]/g, '')}?&body=${encodeURIComponent(P.text)}` : `sms:?&body=${encodeURIComponent(P.text)}`;
-  const mailHref = `mailto:${encodeURIComponent(c?.email || '')}?subject=${encodeURIComponent(email.subject)}&body=${encodeURIComponent(email.body)}`;
   const priceLine = P.variant === 'come' ? `One seat at the F&amp;F rate: <b>${money(pr.ff)}</b>` : P.variant === 'ff' && P.type !== 'post' ? `<b>${money(pr.ff)}</b> each <span class="muted">(friend price ${money(pr.friend)} − ${P.pct}%)</span>` : `<b>${money(pr.friend)}</b> each <span class="muted">· TM list ${money(pr.tm)}</span>`;
   return `<div class="scrim" data-act="pclose"></div>
   <div class="modal" role="dialog" aria-modal="true" aria-label="Pitch ${esc(g.opp)}">
@@ -646,17 +642,21 @@ function pitchModal() {
       <p class="price-line">${priceLine}${P.type === 'post' && P.variant !== 'standard' ? ' <span class="muted small">Board posts are public, so they use the regular price.</span>' : ''}</p>
       <label class="field"><span>To</span><select data-pf="contact"><option value="">No one yet (generic greeting)</option>${groups.map(gr => `<optgroup label="${esc(gr)}">${contacts.filter(x => (x.group || 'Other') === gr).map(x => `<option value="${esc(x.id)}" ${x.id === P.contactId ? 'selected' : ''}>${esc(x.name)}</option>`).join('')}</optgroup>`).join('')}</select></label>
       <label class="field"><span>Message ${P.dirty ? '<span class="muted">(edited)</span>' : ''}</span><textarea data-pf="text" rows="${P.type === 'email' ? 12 : 6}">${esc(P.text)}</textarea></label>
-      <label class="toggle view-toggle"><input type="checkbox" data-pf="view" ${P.view ? 'checked' : ''}><span>Add the view from our seats <span class="muted small">— a link that shows the real Section 201 view as a photo in iMessage</span></span></label>
+      <div class="photo-row ${P.photo ? '' : 'off'}">
+        <img src="${esc(PHOTO())}" alt="The view from our seats, Section 201 Row 2" loading="lazy">
+        <label class="toggle"><input type="checkbox" data-pf="photo" ${P.photo ? 'checked' : ''}><span>Send our seat-view photo with it</span></label>
+      </div>
       <div class="list-actions">
-        <button class="btn" data-act="pcopy">Copy</button>
-        ${P.type === 'text' ? `<a class="btn ghost" id="sms-link" href="${esc(smsHref)}">Open in Messages</a>` : ''}
-        ${canShare && P.type !== 'email' ? '<button class="btn ghost" data-act="pshare">Share with seat picture</button>' : ''}
-        ${P.type === 'email' ? `<a class="btn ghost" id="mail-link" href="${esc(mailHref)}">Open email</a>` : ''}
+        ${canShare && P.type !== 'email' ? `<button class="btn" data-act="pshare">${P.type === 'text' ? 'Text with photo' : 'Share with photo'}</button>` : ''}
+        ${P.type === 'text' ? `<button class="btn ${canShare ? 'ghost' : ''}" data-act="psms">Open in Messages</button>` : ''}
+        ${P.type === 'email' ? '<button class="btn" data-act="pmail">Open email</button>' : ''}
+        <button class="btn ghost" data-act="pcopy">Copy text</button>
+        ${P.photo && state.viewPng ? '<button class="btn ghost" data-act="pcopyphoto">Copy photo</button>' : ''}
         <button class="btn ghost" data-act="pnext">Next wording</button>
         ${P.dirty ? '<button class="btn ghost" data-act="preset">Reset text</button>' : ''}
         <button class="btn ghost" data-act="plog">Log a sale</button>
       </div>
-      <p class="muted small">${canShare ? '<b>Share with seat picture</b> attaches our "where we sit" picture: pick Messages, then the person. ' : ''}Remix with Claude is coming later — for now, ask Claude in chat or edit the text above. You still hit send yourself.</p>
+      <p class="muted small">${canShare ? '<b>Text with photo</b> opens the share sheet with the photo and message attached — pick Messages, then the person. ' : ''}${P.photo && P.type !== 'post' ? '<b>Open in Messages</b> fills in the person and the text and copies the photo — tap and hold in the message, then Paste (⌘V on a Mac). ' : ''}Remix with Claude is coming later. You still hit send yourself.</p>
     </div>
   </div>`;
 }
@@ -1363,7 +1363,19 @@ async function action(act, arg) {
     case 'msort': state.marketSort = arg; return render();
     case 'strat': state.stratTab = arg; return render();
     case 'sellf': state.sellFilter = arg; return render();
-    case 'pitch': state.pitch = { id: arg, step: null, variant: 'standard', type: 'text', pct: Number(state.settings.ffDiscount) || 20, contactId: '', n: 0, text: '', dirty: false, view: true }; loadViewFile(); return renderModal();
+    case 'pitch': state.pitch = { id: arg, step: null, variant: 'standard', type: 'text', pct: Number(state.settings.ffDiscount) || 20, contactId: '', n: 0, text: '', dirty: false, photo: true }; loadViewFile(); return renderModal();
+    case 'psms': case 'pmail': {
+      const P = state.pitch, c = (state.contacts || []).find(x => x.id === P.contactId);
+      const copied = P.photo ? await copyPhoto() : false;
+      const m = splitEmail(P.text);
+      const href = act === 'psms'
+        ? `sms:${(c?.phone || '').replace(/[^\d+]/g, '')}?&body=${encodeURIComponent(P.text)}`
+        : `mailto:${encodeURIComponent(c?.email || '')}?subject=${encodeURIComponent(m.subject)}&body=${encodeURIComponent(m.body)}`;
+      if (copied) toast('Photo copied — tap and hold in the message, then Paste');
+      setTimeout(() => { location.href = href; }, copied ? 350 : 0);
+      return;
+    }
+    case 'pcopyphoto': toast(await copyPhoto() ? 'Photo copied — paste it into your message' : 'This browser can\'t copy photos — use Text with photo'); return;
     case 'pshare': {
       const P = state.pitch;
       try { await navigator.share({ files: [state.viewFile], text: P.text }); }
@@ -1487,7 +1499,7 @@ function onPitchChange(el) {
   if (k === 'step') { P.step = Number(el.value); P.dirty = false; }
   else if (k === 'pct') { P.pct = Math.max(0, Math.min(90, Number(el.value) || 0)); P.dirty = false; }
   else if (k === 'hook') { g.hook = el.value.trim(); persist(g); P.dirty = false; }
-  else if (k === 'view') { P.view = el.checked; if (P.dirty) P.text = withView(P.text, P.view); }
+  else if (k === 'photo') { P.photo = el.checked; }
   else if (k === 'contact') {
     P.contactId = el.value;
     const c = state.contacts.find(x => x.id === P.contactId);
@@ -1516,10 +1528,6 @@ function onInput(e) {
   if (el.dataset.pf === 'text' && state.pitch) {
     const P = state.pitch;
     P.text = el.value; P.dirty = true;
-    const sms = document.getElementById('sms-link'), mail = document.getElementById('mail-link');
-    const c = (state.contacts || []).find(x => x.id === P.contactId);
-    if (sms) sms.href = `sms:${(c?.phone || '').replace(/[^\d+]/g, '')}?&body=${encodeURIComponent(P.text)}`;
-    if (mail) { const m = splitEmail(P.text); mail.href = `mailto:${encodeURIComponent(c?.email || '')}?subject=${encodeURIComponent(m.subject)}&body=${encodeURIComponent(m.body)}`; }
     return;
   }
   if (el.dataset.f === 'note') {

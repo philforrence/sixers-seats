@@ -505,4 +505,6 @@ a.comp-link:hover { text-decoration: underline; }
 .sheet tr.pending-row td { color: var(--muted); }
 .sheet td .btn.small { min-height: 30px; padding: 0 12px; font-size: 13px; }
 
-.view-toggle { align-items: flex-start; } .view-toggle span { line-height: 1.35; }
+.photo-row { display: flex; align-items: center; gap: 12px; padding: 8px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
+.photo-row img { width: 112px; height: 68px; object-fit: cover; border-radius: 8px; flex: none; }
+.photo-row.off img { opacity: .35; filter: grayscale(1); }
