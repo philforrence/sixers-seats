@@ -1,0 +1,295 @@
+{
+  "researched": "2026-10-20",
+  "sixers": "Verified: the Sixers traded Paul George plus two firsts and two seconds to Boston for Jaylen Brown (agreed July 1, 2026) and signed LeBron James to a two-year deal (July 24; ESPN reported about $8M). Joel Embiid (healthy, 'ready to go' per Nick Nurse), Tyrese Maxey and VJ Edgecombe (2025-26 ROY finalist) are still the core, and Anfernee Simons, Dean Wade and Kentavious Caldwell-Pope were added. Lost: Paul George (BOS), Quentin Grimes (LAL), Kelly Oubre Jr. (IND), Andre Drummond (NYK), Jared McCain (traded to OKC Feb 2026). Ariel Hukporti tore his Achilles in preseason. Last season: 45-37, beat Orlando in the play-in, came back from 3-1 down to beat Boston (first series win over the Celtics since 1982), then got swept by the eventual champion Knicks. 2026-27: a franchise-record 34 national TV games, Nick Nurse coaching.",
+  "notes": {
+    "schedule_check": "All 40 dates and tip times match ESPN's Sixers schedule (checked 2026-10-20). No changes found.",
+    "home_game_41": "The Inquirer counts 41 home games. The 41st isn't on the list yet: every team has two games still to be scheduled between Dec 4 and Dec 10, and the NBA sets them from the NBA Cup group results. Expect one more December home date to appear.",
+    "nba_cup": "Sixers are in East Group B (Knicks, Cavaliers, Heat, Pacers). Their home Cup group games are Oct 30 vs NYK and Nov 25 vs MIA. Away: Nov 6 at CLE, Nov 27 at IND.",
+    "cheapest_at_launch": "Per the Inquirer, only six home games opened at the $75 upper-deck base price: Nov 2 CHI, Nov 12 TOR, Dec 1 MEM, Jan 12 WAS, Jan 25 LAC, Apr 4 ATL. The home opener and the Knicks games started at $320.",
+    "national_tv_home": "Oct 22 ESPN, Oct 30 Prime, Nov 10 NBC, Nov 25 ESPN, Dec 23 Prime, Jan 6 ESPN, Jan 8 ESPN, Jan 12 NBC, Feb 5 Prime, Feb 7 NBC, Feb 11 Prime, Mar 4 Prime, Mar 15 Peacock, Mar 21 NBC, Mar 31 ESPN. NBA TV: Oct 24, Dec 2, Dec 17.",
+    "back_to_backs_rest_risk": "These home games are one night of a Sixers back-to-back, so Embiid or LeBron could rest: Oct 24/25, Nov 15 (at BKN next night), Dec 1/2, Jan 19 (at ATL the day before), Feb 7/8, Mar 3/4, Mar 8 (at BOS the day before), Mar 17 (at WAS next night). That's why no hook depends on Embiid playing.",
+    "confidence_key": "high = verified fact that doesn't depend on a player's health months out; medium = verified, but the hook depends on an injury-prone or far-off player actually suiting up; low = unverified (none used)."
+  },
+  "games": {
+    "2026-10-22": {
+      "hook": "Home opener: LeBron vs. his old Cavs",
+      "alt": "LeBron's first home game as a Sixer",
+      "basis": "NBA schedule release: LeBron makes his Philadelphia home debut vs. Cleveland on Oct 22 (ESPN). He played for the Cavs 2003-10 and 2014-18, and he wasn't on the Sixers' Oct 19 injury report. The Cavs (Mitchell, Mobley, ex-Sixer James Harden) made the East finals last season.",
+      "source": "https://pr.nba.com/2026-27-nba-regular-season-schedule/",
+      "confidence": "high"
+    },
+    "2026-10-24": {
+      "hook": "Saturday night, Bucks without Giannis",
+      "alt": "First home Saturday of the LeBron era",
+      "basis": "The Bucks traded Giannis to Miami in June 2026 and got Tyler Herro, Kel'el Ware, Jaime Jaquez Jr. and picks. This is the Sixers' first Saturday home game. NBA TV.",
+      "source": "https://www.espn.com/nba/story/_/id/49149967",
+      "confidence": "high"
+    },
+    "2026-10-25": {
+      "hook": "Cade's Pistons, last year's East No. 1",
+      "alt": "Sunday night vs. Detroit",
+      "basis": "The Pistons went 60-22 as the East's No. 1 seed in 2025-26 (lost to CLE in the second round), led by Cade Cunningham. Second night of a Sixers back-to-back.",
+      "source": "https://en.wikipedia.org/wiki/2026_NBA_playoffs",
+      "confidence": "high"
+    },
+    "2026-10-30": {
+      "hook": "Champion Knicks, our NBA Cup opener",
+      "alt": "Payback for May's sweep, Friday night",
+      "basis": "The Knicks won the 2026 title (4-1 over the Spurs) after sweeping the Sixers 4-0 in the East semis. Oct 30 is the Sixers' first NBA Cup group game (East Group B), on Prime Video. Ex-Sixer Andre Drummond comes back with the Knicks.",
+      "source": "https://www.fox29.com/news/sixers-2026-27-schedule-christmas-day-among-34-nationally-televised-games",
+      "confidence": "high"
+    },
+    "2026-11-02": {
+      "hook": "Monday night vs. the Bulls",
+      "alt": "No. 4 pick Caleb Wilson's Bulls",
+      "basis": "The Bulls took Caleb Wilson (UNC) No. 4 in the 2026 draft and also have Giddey, Buzelis and Norman Powell. One of six $75-base games at launch. Alt is medium because it depends on a rookie playing.",
+      "source": "https://www.espn.com/nba/story/_/id/49085674/2026-nba-draft-round-1-winners-surprises-teams-picks-questions-washington-jazz-memphis",
+      "confidence": "high"
+    },
+    "2026-11-10": {
+      "hook": "PG back in Philly as a Celtic",
+      "alt": "Celtics rematch after our 3-1 comeback",
+      "basis": "PG went to Boston in the Jaylen Brown trade. NBC Sports Philadelphia calls Nov 10 the first trip to Philly for PG and the Celtics (regular season; they played a preseason game here Oct 16). The Sixers beat Boston 4-3 from 3-1 down in the 2026 first round. National TV on NBC.",
+      "source": "https://www.nbcsportsphiladelphia.com/nba/philadelphia-76ers/sixers-schedule-2026-27-nba-season-analysis/746779/",
+      "confidence": "high"
+    },
+    "2026-11-12": {
+      "hook": "Kawhi's back with the Raptors",
+      "alt": "Thursday night vs. Kawhi and Scottie",
+      "basis": "The Clippers traded Kawhi Leonard back to Toronto this summer (Brandon Ingram and Gradey Dick went to LA). He scored 21 in his preseason debut Oct 13. The Raptors were the East's No. 5 seed last season. Medium because Kawhi often sits.",
+      "source": "https://raptorsrepublic.com/2026/10/14/raptors-in-awe-after-kawhi-leonards-strong-pre-season-debut/",
+      "confidence": "medium"
+    },
+    "2026-11-15": {
+      "hook": "Sunday matinee, Oubre's back with Indy",
+      "alt": "Haliburton's back from the Achilles",
+      "basis": "Kelly Oubre Jr. signed a two-year deal with Indiana, and NBC Sports Philadelphia lists Nov 15 as his return. Tyrese Haliburton came back from his torn Achilles this preseason with 'no restrictions.' Sunday 1:00 tip.",
+      "source": "https://www.nbcsportsphiladelphia.com/nba/philadelphia-76ers/sixers-schedule-2026-27-nba-season-analysis/746779/",
+      "confidence": "high"
+    },
+    "2026-11-21": {
+      "hook": "Saturday 1pm matinee",
+      "alt": "Saturday afternoon vs. Herro's Bucks",
+      "basis": "Saturday 1:00 tip. Tyler Herro now plays for Milwaukee (came over in the Giannis trade).",
+      "source": "https://www.espn.com/nba/team/schedule/_/name/phi/philadelphia-76ers",
+      "confidence": "high"
+    },
+    "2026-11-23": {
+      "hook": "Dame and Ja, same backcourt",
+      "alt": "Thanksgiving week, Monday night",
+      "basis": "Portland traded for Ja Morant this summer, and Damian Lillard is back in Portland after missing 2025-26 with a torn Achilles. They played together for the first time in the Oct 7 preseason opener. Thanksgiving is Nov 26. Medium because of both players' injury histories.",
+      "source": "https://www.newsweek.com/sports/nba/damian-lillard-returns-to-portland-begins-new-era-with-ja-morant-12543476",
+      "confidence": "medium"
+    },
+    "2026-11-25": {
+      "hook": "Giannis in a Heat jersey, NBA Cup",
+      "alt": "Thanksgiving Eve, 5pm tip",
+      "basis": "Miami acquired Giannis Antetokounmpo from Milwaukee (June 2026), and he's healthy and played preseason. This is an NBA Cup group game (East Group B) on ESPN, the Wednesday before Thanksgiving, 5:00 tip.",
+      "source": "https://www.fox29.com/news/sixers-2026-27-schedule-christmas-day-among-34-nationally-televised-games",
+      "confidence": "high"
+    },
+    "2026-12-01": {
+      "hook": "No. 3 pick Cameron Boozer in town",
+      "alt": "Tuesday night vs. Memphis",
+      "basis": "Memphis drafted Cameron Boozer (Duke) No. 3, and half of NBA GMs picked him for Rookie of the Year in NBA.com's survey. Ja Morant is gone (traded to POR). One of six $75-base games at launch. Medium because it depends on a rookie being healthy in December.",
+      "source": "https://www.espn.com/nba/story/_/id/49085674/2026-nba-draft-round-1-winners-surprises-teams-picks-questions-washington-jazz-memphis",
+      "confidence": "medium"
+    },
+    "2026-12-02": {
+      "hook": "Jokic in town, Wednesday night",
+      "alt": "Embiid vs. Jokic, MVP rivals",
+      "basis": "Nikola Jokic (MVP runner-up last season) still anchors Denver. This is the second night of a Sixers back-to-back (Dec 1 vs MEM), so Embiid could rest; that's why the main hook is about Jokic. NBA TV. The alt is medium.",
+      "source": "https://www.nba.com/news/power-rankings-2026-27-week-1",
+      "confidence": "high"
+    },
+    "2026-12-12": {
+      "hook": "Saturday night, play-in rematch vs. Orlando",
+      "alt": "Paolo and Franz, Saturday night",
+      "basis": "The Sixers beat Orlando 109-97 in the April 2026 play-in. The Sixers host the Magic Dec 12 and visit them Dec 14, their only back-to-back series against one team this season.",
+      "source": "https://en.wikipedia.org/wiki/2026_NBA_playoffs",
+      "confidence": "high"
+    },
+    "2026-12-17": {
+      "hook": "Reigning ROY Cooper Flagg in town",
+      "alt": "Flagg vs. VJ, ROY race rematch",
+      "basis": "Cooper Flagg won 2025-26 Rookie of the Year over Kon Knueppel, with VJ Edgecombe the third finalist. Kyrie Irving is back from his ACL tear (played preseason). NBA TV.",
+      "source": "https://www.ksat.com/sports/2026/04/27/cooper-flagg-edges-former-duke-teammate-kon-knueppel-for-nba-rookie-of-the-year/",
+      "confidence": "high"
+    },
+    "2026-12-23": {
+      "hook": "KD in town, two days before Christmas",
+      "alt": "Christmas week game, on Prime",
+      "basis": "Kevin Durant is on the Rockets (52-30 last season, with Sengun and Amen Thompson). Prime Video national game. It's the Sixers' last home game before their Christmas Day trip to the Lakers.",
+      "source": "https://www.nba.com/news/power-rankings-2026-27-week-1",
+      "confidence": "high"
+    },
+    "2027-01-04": {
+      "hook": "First home game of 2027",
+      "alt": "Welcome-home game after the West trip",
+      "basis": "Dec 23 is the last home game of 2026. Then a five-game road trip (Dec 25 to Jan 1). Jan 4 is the first game back. The Hawks have Jalen Johnson and No. 8 pick Kingston Flemings.",
+      "source": "https://www.fox29.com/news/sixers-2026-27-schedule-christmas-day-among-34-nationally-televised-games",
+      "confidence": "high"
+    },
+    "2027-01-06": {
+      "hook": "Two-time MVP SGA in town",
+      "alt": "SGA plus ex-Sixer Jared McCain",
+      "basis": "Shai Gilgeous-Alexander won his second straight MVP (May 2026). The Sixers traded Jared McCain to OKC on Feb 4, 2026. ESPN national game.",
+      "source": "https://africa.espn.com/nba/story/_/id/48795765/sources-thunder-shai-gilgeous-alexander-repeats-nba-mvp",
+      "confidence": "high"
+    },
+    "2027-01-08": {
+      "hook": "Friday night vs. Giannis' Heat",
+      "alt": "Giannis and Bam, on ESPN",
+      "basis": "Giannis was traded to Miami (June 2026) to pair with Bam Adebayo. Friday night ESPN national game.",
+      "source": "https://www.espn.com/nba/story/_/id/49149967",
+      "confidence": "high"
+    },
+    "2027-01-12": {
+      "hook": "Dybantsa, Trae and AD in town",
+      "alt": "Tuesday night on NBC vs. the Wizards",
+      "basis": "Washington drafted AJ Dybantsa No. 1 and now has Trae Young and Anthony Davis (both acquired last season). All three played together this preseason. NBC national game, and one of six $75-base games at launch. Medium because of AD's injury history.",
+      "source": "https://www.newsweek.com/sports/nba/wizards-new-big-three-make-strong-first-impression-against-knicks-12548624",
+      "confidence": "medium"
+    },
+    "2027-01-14": {
+      "hook": "Thursday night vs. Brooklyn",
+      "alt": "MPJ and rookie Mikel Brown Jr.",
+      "basis": "The Nets are rebuilding (No. 28 in NBA.com's preseason power rankings) with Michael Porter Jr., Julius Randle and No. 6 pick Mikel Brown Jr. (ankle injury this preseason). The alt is medium.",
+      "source": "https://www.nba.com/news/power-rankings-2026-27-week-1",
+      "confidence": "high"
+    },
+    "2027-01-16": {
+      "hook": "Ant + LaMelo, Saturday matinee",
+      "alt": "MLK weekend afternoon game",
+      "basis": "Minnesota got LaMelo Ball from Charlotte in a four-team trade (July 2026) to pair with Anthony Edwards. Saturday 12:30 tip. MLK Day is Mon Jan 18.",
+      "source": "https://www.nba.com/news/lamelo-ball-trade-timberwolves-2026",
+      "confidence": "high"
+    },
+    "2027-01-19": {
+      "hook": "Haliburton's Pacers, ex-Sixer Oubre",
+      "alt": "Tuesday night vs. Indiana",
+      "basis": "Haliburton is back from his Achilles tear, and Kelly Oubre Jr. signed with Indiana. The Sixers play at ATL on MLK Day afternoon (Jan 18), so this is the second night of a back-to-back. Medium because Haliburton is coming off a major injury.",
+      "source": "https://www.tsn.ca/nba/article/haliburtons-return-brings-hope-and-expectations-in-indiana-n1-50168604/",
+      "confidence": "medium"
+    },
+    "2027-01-25": {
+      "hook": "Monday night vs. the Clippers",
+      "alt": "No. 5 pick Keaton Wagler's Clippers",
+      "basis": "Kawhi (traded to TOR) and Harden (traded to CLE) are both gone. The Clippers are rebuilding around Darius Garland, and Brandon Ingram is out to start the season with a partially torn Achilles. They drafted Keaton Wagler No. 5. One of six $75-base games at launch. The alt is medium.",
+      "source": "https://www.espn.com/nba/team/schedule/_/name/phi/philadelphia-76ers",
+      "confidence": "high"
+    },
+    "2027-01-27": {
+      "hook": "Wednesday night vs. the Kings",
+      "alt": "Sabonis and No. 7 pick Acuff",
+      "basis": "Sacramento went 22-60 last season and has Domantas Sabonis, Zach LaVine and No. 7 pick Darius Acuff Jr. Don't pitch Ben Simmons: he signed with the Kings but tore his Achilles Oct 18 and is expected to miss the season. The alt is medium because players could be traded before the Feb 11 deadline.",
+      "source": "https://www.espn.com/nba/story/_/id/50214131/kings-simmons-believed-achilles-tendon-tear",
+      "confidence": "high"
+    },
+    "2027-02-01": {
+      "hook": "Zion in town, Monday night",
+      "alt": "Monday night vs. New Orleans",
+      "basis": "Zion Williamson played 62 games last season, and Joe Dumars called him in 'impeccable condition' at media day. Medium because of his injury history. Ex-Sixer Trendon Watford is now a Pelican.",
+      "source": "https://bleacherreport.com/articles/25504346-zion-williamson-lost-7-pounds-impeccable-shape-after-injury-history-pelicans-joe-dumars-says",
+      "confidence": "medium"
+    },
+    "2027-02-05": {
+      "hook": "Friday night vs. Cade, on Prime",
+      "alt": "Kicks off a four-game homestand",
+      "basis": "Prime Video national game against the Pistons (last year's East No. 1 seed). Feb 5-11 is the Sixers' longest homestand of the season (four games).",
+      "source": "https://www.nbcsportsphiladelphia.com/nba/philadelphia-76ers/sixers-schedule-2026-27-nba-season-analysis/746779/",
+      "confidence": "high"
+    },
+    "2027-02-07": {
+      "hook": "Sunday night Celtics, on NBC",
+      "alt": "Tatum and PG, Sunday night",
+      "basis": "NBC national game. Jayson Tatum looked healthy this preseason and Paul George is now in Boston. Rematch of last spring's 3-1 comeback series.",
+      "source": "https://www.fox29.com/news/sixers-2026-27-schedule-christmas-day-among-34-nationally-televised-games",
+      "confidence": "high"
+    },
+    "2027-02-08": {
+      "hook": "Monday night vs. the Nets",
+      "alt": "MPJ and the Nets, Monday night",
+      "basis": "Second night of a back-to-back (Feb 7 vs BOS) and game 3 of the four-game homestand. The Nets are rebuilding around Michael Porter Jr. and Julius Randle.",
+      "source": "https://www.espn.com/nba/team/schedule/_/name/phi/philadelphia-76ers",
+      "confidence": "high"
+    },
+    "2027-02-11": {
+      "hook": "Knicks rivalry on trade deadline day",
+      "alt": "Champion Knicks, on Prime",
+      "basis": "NBC Sports Philadelphia notes Feb 11 is the trade deadline. Prime Video national game. The Knicks are defending champions and swept the Sixers last May.",
+      "source": "https://www.nbcsportsphiladelphia.com/nba/philadelphia-76ers/sixers-schedule-2026-27-nba-season-analysis/746779/",
+      "confidence": "high"
+    },
+    "2027-02-17": {
+      "hook": "Booker in town, last game before All-Star",
+      "alt": "Wednesday night vs. Phoenix",
+      "basis": "Devin Booker is still the Suns' centerpiece. All-Star Weekend is Feb 19-21, and the Sixers' next game after Feb 17 is Feb 25.",
+      "source": "https://pr.nba.com/2026-27-nba-regular-season-schedule/",
+      "confidence": "high"
+    },
+    "2027-03-03": {
+      "hook": "Kon Knueppel, ROY runner-up, in town",
+      "alt": "Wednesday night vs. Charlotte",
+      "basis": "Kon Knueppel finished second in Rookie of the Year voting. He's starting the season hurt (hamstring), so this is medium. LaMelo Ball was traded to Minnesota.",
+      "source": "https://www.ksat.com/sports/2026/04/27/cooper-flagg-edges-former-duke-teammate-kon-knueppel-for-nba-rookie-of-the-year/",
+      "confidence": "medium"
+    },
+    "2027-03-04": {
+      "hook": "LeBron vs. his old team, plus Luka",
+      "alt": "Luka and the Lakers, on Prime",
+      "basis": "LeBron left the Lakers for Philly in July 2026, and Luka Doncic leads LA. Ex-Sixers Quentin Grimes and Matisse Thybulle are now Lakers. Prime Video national game. Second night of a back-to-back (Mar 3 vs CHA) (rest risk).",
+      "source": "https://www.fox29.com/news/sixers-2026-27-schedule-christmas-day-among-34-nationally-televised-games",
+      "confidence": "high"
+    },
+    "2027-03-08": {
+      "hook": "No. 2 pick Darryn Peterson in town",
+      "alt": "Monday night vs. Utah",
+      "basis": "Utah drafted Darryn Peterson (Kansas) No. 2. The Jazz also have Jaren Jackson Jr. (from MEM) and Lauri Markkanen. Medium because it depends on a rookie being healthy in March.",
+      "source": "https://www.espn.com/nba/story/_/id/49085674/2026-nba-draft-round-1-winners-surprises-teams-picks-questions-washington-jazz-memphis",
+      "confidence": "medium"
+    },
+    "2027-03-15": {
+      "hook": "Kawhi and the Raptors, round two",
+      "alt": "Ides of March vs. Kawhi",
+      "basis": "Kawhi Leonard is back in Toronto (traded this summer). Peacock national game. Medium because Kawhi often sits.",
+      "source": "https://www.fox29.com/news/sixers-2026-27-schedule-christmas-day-among-34-nationally-televised-games",
+      "confidence": "medium"
+    },
+    "2027-03-17": {
+      "hook": "St. Patrick's Day vs. the Bulls",
+      "alt": "Wednesday night vs. Chicago",
+      "basis": "The game falls on March 17, St. Patrick's Day. Calendar fact.",
+      "source": "https://www.espn.com/nba/team/schedule/_/name/phi/philadelphia-76ers",
+      "confidence": "high"
+    },
+    "2027-03-21": {
+      "hook": "Wemby's only trip to Philly",
+      "alt": "West champs on Sunday night NBC",
+      "basis": "The Spurs visit Philly once this season. They're the defending West champs (lost the Finals 4-1 to NYK), and Wembanyama was unanimous DPOY and third in MVP voting. NBC national game. Ex-Sixer Tobias Harris is now a Spur.",
+      "source": "https://www.nbcsportsphiladelphia.com/nba/philadelphia-76ers/sixers-schedule-2026-27-nba-season-analysis/746779/",
+      "confidence": "high"
+    },
+    "2027-03-31": {
+      "hook": "Steph's only Philly stop this year",
+      "alt": "Curry plus ex-Sixers Horford and Melton",
+      "basis": "The Warriors' only visit to Philly this season. ESPN national game. Al Horford and De'Anthony Melton re-signed with Golden State. Medium because Curry had an ankle scare this preseason and will be 39. Jimmy Butler (ex-Sixer) is targeting a Jan/Feb return from his ACL tear, which is unconfirmed, so don't pitch him.",
+      "source": "https://www.nba.com/news/nba-offseason-deals-2026",
+      "confidence": "medium"
+    },
+    "2027-04-04": {
+      "hook": "Sunday 1pm matinee",
+      "alt": "Sunday afternoon, playoff push",
+      "basis": "Sunday 1:00 tip, one week before the regular season ends. One of six $75-base games at launch.",
+      "source": "https://www.espn.com/nba/team/schedule/_/name/phi/philadelphia-76ers",
+      "confidence": "high"
+    },
+    "2027-04-11": {
+      "hook": "Regular-season finale, Sunday night",
+      "alt": "Last game of the regular season",
+      "basis": "The NBA regular season ends Sunday, April 11, 2027, with all 30 teams playing. The 6:00 tip could shift, since the league often moves final-day start times.",
+      "source": "https://pr.nba.com/2026-27-nba-regular-season-schedule/",
+      "confidence": "high"
+    }
+  }
+}
