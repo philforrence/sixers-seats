@@ -596,6 +596,27 @@ function sellView() {
   <p class="muted small legend-p">Pick a game and hit <b>Pitch</b> to get a text, email or board post with today's price filled in. Friend price is what similar seats cost online with fees included; F&amp;F takes ${pct}% off (rounded down to $5). One game per person, and the ask is a simple yes or no.</p>`;
 }
 
+// The seat-view link: RateYourSeats' Section 201 page, whose preview image is the basketball view from 201.
+const viewUrl = () => state.settings.seatViewUrl || 'https://www.rateyourseats.com/xfinity-mobile-arena/seating/sections/201';
+const viewLine = () => `The view from our section: ${viewUrl()}`;
+function withView(text, on) {
+  const line = viewLine();
+  const parts = String(text).split('\n\n').filter(x => x.trim() !== line);
+  if (on) {
+    // Emails: put the link just above the sign-off. Texts and posts: at the end.
+    if (/^Subject:/.test(parts[0]) && parts.length > 3) parts.splice(parts.length - 1, 0, line); else parts.push(line);
+  }
+  return parts.join('\n\n');
+}
+// Prefetch the seat picture so "Share" can attach it inside the tap (iOS needs that).
+async function loadViewFile() {
+  if (state.viewFile) return;
+  try {
+    const r = await fetch(state.settings.seatPhoto || 'view.jpg', { cache: 'force-cache' });
+    if (r.ok) { state.viewFile = new File([await r.blob()], 'sixers-sec-201-row-2.jpg', { type: 'image/jpeg' }); if (state.pitch) renderModal(); }
+  } catch {}
+}
+
 function pitchModal() {
   const P = state.pitch;
   const g = P && state.games.find(x => x.id === P.id);
@@ -603,7 +624,8 @@ function pitchModal() {
   const pr = pitchPrices(g, P.step, P.pct);
   const contacts = state.contacts || [];
   const c = contacts.find(x => x.id === P.contactId);
-  if (!P.dirty) P.text = buildMessage(g, { type: P.type, variant: P.variant, price: pr.friend, ff: P.variant === 'come' ? pr.ff : pr.ff, pct: P.pct, hook: hookFor(g), name: c?.name, n: P.n });
+  if (!P.dirty) P.text = withView(buildMessage(g, { type: P.type, variant: P.variant, price: pr.friend, ff: P.variant === 'come' ? pr.ff : pr.ff, pct: P.pct, hook: hookFor(g), name: c?.name, n: P.n }), P.view);
+  const canShare = !!state.viewFile && !!navigator.canShare?.({ files: [state.viewFile] });
   const groups = [...new Set(contacts.map(x => x.group || 'Other'))];
   const email = splitEmail(P.text);
   const smsHref = c?.phone ? `sms:${c.phone.replace(/[^\d+]/g, '')}?&body=${encodeURIComponent(P.text)}` : `sms:?&body=${encodeURIComponent(P.text)}`;
@@ -623,16 +645,18 @@ function pitchModal() {
       <div class="m-row"><span class="label">Send as</span><div class="seg">${TYPES.map(([k, l]) => `<button class="${P.type === k ? 'on' : ''}" data-act="ptype:${k}">${l}</button>`).join('')}</div></div>
       <p class="price-line">${priceLine}${P.type === 'post' && P.variant !== 'standard' ? ' <span class="muted small">Board posts are public, so they use the regular price.</span>' : ''}</p>
       <label class="field"><span>To</span><select data-pf="contact"><option value="">No one yet (generic greeting)</option>${groups.map(gr => `<optgroup label="${esc(gr)}">${contacts.filter(x => (x.group || 'Other') === gr).map(x => `<option value="${esc(x.id)}" ${x.id === P.contactId ? 'selected' : ''}>${esc(x.name)}</option>`).join('')}</optgroup>`).join('')}</select></label>
-      <label class="field"><span>Message ${P.dirty ? '<span class="muted">(edited)</span>' : ''}</span><textarea data-pf="text" rows="${P.type === 'email' ? 11 : 5}">${esc(P.text)}</textarea></label>
+      <label class="field"><span>Message ${P.dirty ? '<span class="muted">(edited)</span>' : ''}</span><textarea data-pf="text" rows="${P.type === 'email' ? 12 : 6}">${esc(P.text)}</textarea></label>
+      <label class="toggle view-toggle"><input type="checkbox" data-pf="view" ${P.view ? 'checked' : ''}><span>Add the view from our seats <span class="muted small">— a link that shows the real Section 201 view as a photo in iMessage</span></span></label>
       <div class="list-actions">
         <button class="btn" data-act="pcopy">Copy</button>
-        ${P.type === 'text' ? `<a class="btn ghost" id="sms-link" href="${esc(smsHref)}">Open in Messages${c?.phone ? '' : ''}</a>` : ''}
+        ${P.type === 'text' ? `<a class="btn ghost" id="sms-link" href="${esc(smsHref)}">Open in Messages</a>` : ''}
+        ${canShare && P.type !== 'email' ? '<button class="btn ghost" data-act="pshare">Share with seat picture</button>' : ''}
         ${P.type === 'email' ? `<a class="btn ghost" id="mail-link" href="${esc(mailHref)}">Open email</a>` : ''}
         <button class="btn ghost" data-act="pnext">Next wording</button>
         ${P.dirty ? '<button class="btn ghost" data-act="preset">Reset text</button>' : ''}
         <button class="btn ghost" data-act="plog">Log a sale</button>
       </div>
-      <p class="muted small">Remix with Claude is coming later — for now, ask Claude in chat or edit the text above. You still hit send yourself.</p>
+      <p class="muted small">${canShare ? '<b>Share with seat picture</b> attaches our "where we sit" picture: pick Messages, then the person. ' : ''}Remix with Claude is coming later — for now, ask Claude in chat or edit the text above. You still hit send yourself.</p>
     </div>
   </div>`;
 }
@@ -1339,7 +1363,13 @@ async function action(act, arg) {
     case 'msort': state.marketSort = arg; return render();
     case 'strat': state.stratTab = arg; return render();
     case 'sellf': state.sellFilter = arg; return render();
-    case 'pitch': state.pitch = { id: arg, step: null, variant: 'standard', type: 'text', pct: Number(state.settings.ffDiscount) || 20, contactId: '', n: 0, text: '', dirty: false }; return renderModal();
+    case 'pitch': state.pitch = { id: arg, step: null, variant: 'standard', type: 'text', pct: Number(state.settings.ffDiscount) || 20, contactId: '', n: 0, text: '', dirty: false, view: true }; loadViewFile(); return renderModal();
+    case 'pshare': {
+      const P = state.pitch;
+      try { await navigator.share({ files: [state.viewFile], text: P.text }); }
+      catch (e) { if (e.name !== 'AbortError') { try { await navigator.share({ text: P.text }); } catch {} } }
+      return;
+    }
     case 'pclose': state.pitch = null; return renderModal();
     case 'pvar': Object.assign(state.pitch, { variant: arg, dirty: false }); return renderModal();
     case 'ptype': Object.assign(state.pitch, { type: arg, dirty: false }); return renderModal();
@@ -1457,6 +1487,7 @@ function onPitchChange(el) {
   if (k === 'step') { P.step = Number(el.value); P.dirty = false; }
   else if (k === 'pct') { P.pct = Math.max(0, Math.min(90, Number(el.value) || 0)); P.dirty = false; }
   else if (k === 'hook') { g.hook = el.value.trim(); persist(g); P.dirty = false; }
+  else if (k === 'view') { P.view = el.checked; if (P.dirty) P.text = withView(P.text, P.view); }
   else if (k === 'contact') {
     P.contactId = el.value;
     const c = state.contacts.find(x => x.id === P.contactId);

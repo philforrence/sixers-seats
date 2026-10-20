@@ -504,3 +504,5 @@ a.comp-link:hover { text-decoration: underline; }
 .sheet-wrap.flat { box-shadow: none; }
 .sheet tr.pending-row td { color: var(--muted); }
 .sheet td .btn.small { min-height: 30px; padding: 0 12px; font-size: 13px; }
+
+.view-toggle { align-items: flex-start; } .view-toggle span { line-height: 1.35; }
