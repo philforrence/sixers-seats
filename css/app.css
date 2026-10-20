@@ -313,3 +313,72 @@ button.stat:hover { border-color: var(--accent); }
 #toast.tappable { pointer-events: auto; cursor: pointer; }
 @media (min-width: 900px) { #toast { bottom: 24px; } }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
+
+/* ---------- Strategy sheets */
+.tabs { display: flex; gap: 2px; border-bottom: 1px solid var(--line); overflow-x: auto; scrollbar-width: none; margin: 0 -16px; padding: 0 16px; }
+.tabs::-webkit-scrollbar { display: none; }
+@media (min-width: 900px) { .tabs { margin: 0; padding: 0; } }
+.tabs button { flex: none; padding: 10px 14px; font-weight: 600; font-size: 14px; color: var(--muted); border-bottom: 2px solid transparent; margin-bottom: -1px; white-space: nowrap; }
+.tabs button.on { color: var(--text); border-bottom-color: var(--accent); }
+.tabs .count { display: inline-block; min-width: 20px; padding: 1px 6px; margin-left: 4px; border-radius: 999px; background: var(--surface-2); font-size: 12px; text-align: center; }
+.tabs button.on .count { background: var(--accent); color: var(--accent-ink); }
+.toggle.small { font-size: 13px; color: var(--muted); }
+.toggle.small input { width: 16px; height: 16px; }
+.strip { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 13px; color: var(--muted); align-items: baseline; }
+.strip b { color: var(--text); font-size: 15px; }
+.strip .bad b, .strip .warn-t b { color: inherit; }
+.warn-t { color: var(--c-selling); font-weight: 600; }
+.block { display: block; }
+.nowrap { white-space: nowrap; }
+.legend-p { max-width: 900px; }
+
+.sheet-wrap { overflow-x: auto; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow); -webkit-overflow-scrolling: touch; }
+.sheet { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 13px; font-variant-numeric: tabular-nums; }
+.sheet th { position: sticky; top: 0; z-index: 2; background: var(--surface-2); color: var(--muted); font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line); white-space: nowrap; line-height: 1.2; vertical-align: bottom; }
+.sheet th small { font-weight: 500; text-transform: none; letter-spacing: 0; font-size: 10px; }
+.sheet th.r { text-align: right; }
+.sheet td { padding: 3px 6px; border-bottom: 1px solid var(--line); vertical-align: middle; height: 36px; }
+.sheet td.r { text-align: right; }
+.sheet tbody tr:hover td { background: color-mix(in srgb, var(--accent) 4%, var(--surface)); }
+.sheet tbody tr:last-child td { border-bottom: 0; }
+.sheet .sticky { position: sticky; left: 0; z-index: 1; background: var(--surface); box-shadow: 1px 0 0 var(--line); }
+.sheet th.sticky { z-index: 3; background: var(--surface-2); }
+.sheet tr.hot td.sticky { box-shadow: inset 3px 0 0 var(--c-selling), 1px 0 0 var(--line); }
+.game-cell { display: flex; align-items: center; gap: 6px; white-space: nowrap; padding: 2px 4px 2px 0; }
+.game-cell b { font-family: var(--display); font-size: 15px; min-width: 34px; }
+.game-cell span { color: var(--muted); font-size: 12px; }
+.game-cell i { font-style: normal; }
+.game-cell:hover b { color: var(--accent); }
+
+.cell-in { width: 68px; padding: 4px 6px; font-size: 13px; text-align: right; border: 1px solid transparent; background: transparent; border-radius: 6px; font-variant-numeric: tabular-nums; }
+.cell-in:hover { border-color: var(--line); }
+.cell-in:focus { border-color: var(--accent); background: var(--surface); outline: none; box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 25%, transparent); }
+.cell-in::placeholder { color: var(--muted); opacity: .9; }
+.cell-in.set { font-weight: 700; color: var(--text); }
+.cell-in.name { width: 92px; text-align: left; font-weight: 600; }
+.cell-in.name.p1 { color: var(--p1); } .cell-in.name.p2 { color: var(--p2); } .cell-in.name.guest { color: var(--guest); }
+.cell-in.note { width: 180px; text-align: left; }
+.cell-in::-webkit-outer-spin-button, .cell-in::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.cell-in[type=number] { -moz-appearance: textfield; }
+.cell-select { font-size: 13px; padding: 4px 24px 4px 8px; border-radius: 8px; width: auto; min-width: 128px; font-weight: 600; }
+.cell-select.a-sell { color: var(--c-selling); } .cell-select.a-both, .cell-select.a-p1, .cell-select.a-p2 { color: var(--c-going); } .cell-select.a-undecided { color: var(--muted); }
+
+.sheet td.step.done .cell-in { opacity: .45; text-decoration: line-through; }
+.sheet td.step.now { background: color-mix(in srgb, var(--accent) 12%, var(--surface)); }
+.sheet td.step.now .cell-in { font-weight: 700; color: var(--text); }
+.sheet thead th:nth-child(n) { }
+.listed { display: inline-flex; align-items: center; gap: 4px; justify-content: flex-end; }
+.act { font-size: 11px; font-weight: 700; padding: 2px 6px; border-radius: 6px; white-space: nowrap; }
+.act.list { background: var(--info-bg); color: var(--info-ink); }
+.act.move { background: var(--warn-bg); color: var(--warn-ink); }
+.act.ok { color: var(--good); }
+.sheet tr.group td { background: var(--surface-2); font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); height: 28px; }
+.sheet tr.sold-row td { color: var(--muted); }
+@media (max-width: 760px) {
+  .cell-in, .cell-select { font-size: 16px; }  /* avoids iOS zoom on focus */
+  .cell-in { width: 64px; }
+  .cell-in.name { width: 88px; }
+  .game-cell .wd, .game-cell .logo { display: none; }
+  .game-cell b { min-width: 30px; font-size: 14px; }
+  .sheet td, .sheet th { padding-left: 5px; padding-right: 5px; }
+}

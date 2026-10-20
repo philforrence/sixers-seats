@@ -5,7 +5,7 @@ import { loadPrices, absorbed, searchLinks } from './prices.js';
 import { team, TEAM_NAMES } from './teams.js';
 import {
   status, STATUS_LABEL, isPast, daysUntil, startTime, holders, estimate, trend, seatMultiplier, market,
-  netPayout, feePct, ledger, money, PLATFORMS, setSeatCount, parseDate,
+  netPayout, feePct, ledger, money, PLATFORMS, setSeatCount, parseDate, STEPS, ladder, floorPrice, hoursUntil,
 } from './model.js';
 
 const [P1, P2] = CONFIG.PARTNERS;
@@ -14,7 +14,7 @@ const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': 
 
 const state = {
   user: null, games: [], settings: {}, prices: { games: {} }, mult: { value: 1, basis: 'default' },
-  view: 'home', open: null, filter: 'upcoming', gamesMode: 'list', marketSort: 'value', loading: true, error: '',
+  view: 'strategy', stratTab: 'selling', showPast: false, open: null, filter: 'upcoming', gamesMode: 'list', marketSort: 'value', loading: true, error: '',
 };
 const store = DEMO ? new DemoStore() : new SheetStore();
 
@@ -25,7 +25,11 @@ async function boot() {
   document.addEventListener('click', onClick);
   document.addEventListener('change', onChange);
   document.addEventListener('input', onInput);
-  document.addEventListener('keydown', e => { if (e.key === 'Escape' && state.open) closeGame(); });
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && state.open) closeGame();
+    // Enter in a sheet cell commits it, like a spreadsheet.
+    if (e.key === 'Enter' && e.target.classList?.contains('cell-in')) e.target.blur();
+  });
   route(false);
   if (DEMO) {
     state.user = { name: P1, email: 'demo', demo: true };
@@ -59,6 +63,7 @@ async function loadAll() {
     render();
     const baselines = DEMO ? Object.fromEntries(games.map(g => [g.id, g.baseline || 100])) : undefined;
     state.prices = await loadPrices({ demo: DEMO, baselines });
+    await migrate();
     state.mult = seatMultiplier(state.games, state.prices, state.settings);
   } catch (e) {
     if (e instanceof AuthError) state.user = null;
@@ -104,7 +109,7 @@ async function saveSettings() {
 
 function route(doRender = true) {
   const [view, id] = location.hash.replace(/^#\/?/, '').split('/');
-  state.view = ['home', 'games', 'market', 'split', 'settings'].includes(view) ? view : 'home';
+  state.view = ['strategy', 'home', 'games', 'market', 'split', 'settings'].includes(view) ? view : 'strategy';
   state.open = id || null;
   if (doRender) render();
 }
@@ -198,13 +203,14 @@ function render() {
   if (!state.user) { app.innerHTML = signInView(); return; }
   if (state.loading && !state.games.length) { app.innerHTML = shell('<div class="loading"><div class="ball"></div>Loading your season…</div>'); return; }
   if (state.error && !state.games.length) { app.innerHTML = shell(`<div class="card error"><h2>Something's off</h2><p>${esc(state.error)}</p><button class="btn" data-act="reload">Try again</button></div>`); return; }
-  const views = { home: homeView, games: gamesView, market: marketView, split: splitView, settings: settingsView };
+  const views = { strategy: strategyView, home: homeView, games: gamesView, market: marketView, split: splitView, settings: settingsView };
   app.innerHTML = shell(views[state.view]());
   renderDrawer();
 }
 
 function shell(content) {
   const nav = [
+    ['strategy', 'Strategy', '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M3 14h18M9 9v11M15 9v11"/>'],
     ['home', 'Home', '<path d="M3 11l9-7 9 7v9a1 1 0 01-1 1h-5v-6H9v6H4a1 1 0 01-1-1z"/>'],
     ['games', 'Games', '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/>'],
     ['market', 'Market', '<path d="M4 19l5-6 4 3 7-9"/><path d="M15 7h5v5"/>'],
@@ -225,7 +231,7 @@ function shell(content) {
   </header>
   <nav class="sidenav" aria-label="Main">${links}</nav>
   <main class="content">${content}</main>
-  <nav class="tabbar" aria-label="Main">${links}</nav>
+  <nav class="tabbar" aria-label="Main">${links.replace(/<a href="#\/settings"[\s\S]*?<\/a>/, '')}</nav>
   <div id="drawer-root"></div>
   <div id="toast" role="status" aria-live="polite"></div>`;
 }
@@ -244,6 +250,197 @@ function signInView() {
       <p class="muted small">Only ${Object.keys(CONFIG.ALLOWED).map(esc).join(' and ')} can get in.</p>
     </div>
   </div>`;
+}
+
+// ---- Strategy
+
+// How a game is assigned, as one choice: both partners, one partner + a guest, sell, or undecided.
+function assignment(g) {
+  if (g.soldPrice != null) return 'sold';
+  if (g.plan === 'sell') return 'sell';
+  if (g.plan === 'undecided') return 'undecided';
+  const h = holders(g);
+  if (h.includes(P1) && h.includes(P2)) return 'both';
+  if (h.includes(P1)) return 'p1';
+  if (h.includes(P2)) return 'p2';
+  return 'custom';
+}
+const ASSIGN = [['both', `${P1} & ${P2}`], ['p1', `${P1} + guest`], ['p2', `${P2} + guest`], ['sell', 'Sell'], ['undecided', 'Undecided']];
+
+function assignSelect(g) {
+  const cur = assignment(g);
+  if (cur === 'sold') return `<span class="chip chip-sold">Sold ${money(g.soldPrice)}</span>`;
+  const opts = (cur === 'custom' ? [['custom', 'Guests only'], ...ASSIGN] : ASSIGN)
+    .map(([k, l]) => `<option value="${k}" ${k === cur ? 'selected' : ''}>${esc(l)}</option>`).join('');
+  return `<select class="cell-select a-${cur}" data-gid="${g.id}" data-assign aria-label="Who's going">${opts}</select>`;
+}
+
+const gameCell = g => `<button class="game-cell" data-open="${g.id}">${logo(g, 22)}<b>${team(g.opp).abbr}</b><span><i class="wd">${fmtDate(g, { weekday: 'short' })} </i>${fmtDate(g, { month: 'numeric', day: 'numeric' })}</span></button>`;
+const stratGames = () => state.games.filter(g => state.showPast || !isPast(g));
+const goingWith = name => g => g.plan === 'use' && holders(g).includes(name);
+const STRAT_TABS = [
+  ['selling', 'Selling', g => g.plan === 'sell' || g.soldPrice != null],
+  ['both', 'Both going', g => goingWith(P1)(g) && goingWith(P2)(g)],
+  ['p1', `${P1}'s games`, goingWith(P1)],
+  ['p2', `${P2}'s games`, goingWith(P2)],
+  ['undecided', 'Undecided', g => g.plan === 'undecided' && g.soldPrice == null],
+];
+
+const outLabel = h => {
+  if (h <= 0) return 'Today';
+  if (h < 48) return `${Math.round(h)}h`;
+  const d = Math.floor(h / 24);
+  return d < 14 ? `${d}d ${Math.round(h - d * 24)}h` : `${d}d`;
+};
+const shortWhen = (g, d) => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + (d - startTime(g) > -5 * 86400e3 ? ' ' + d.toLocaleTimeString('en-US', { hour: 'numeric' }).replace(' ', '').toLowerCase() : '');
+
+function strategyView() {
+  const games = stratGames();
+  const tabs = STRAT_TABS.filter(([k, , f]) => k !== 'undecided' || games.some(f));
+  if (!tabs.find(t => t[0] === state.stratTab)) state.stratTab = 'selling';
+  const [, , filter] = tabs.find(t => t[0] === state.stratTab);
+  const rows = games.filter(filter);
+  const body = state.stratTab === 'selling' ? sellingTable(rows) : goingTable(rows, state.stratTab);
+  return `
+  <div class="view-head"><h1>Strategy</h1>
+    <label class="toggle small"><input type="checkbox" data-act-check="showpast" ${state.showPast ? 'checked' : ''}><span>Show past games</span></label>
+  </div>
+  <div class="tabs" role="tablist">${tabs.map(([k, l, f]) => `<button role="tab" class="${state.stratTab === k ? 'on' : ''}" aria-selected="${state.stratTab === k}" data-act="strat:${k}">${esc(l)} <span class="count">${games.filter(f).length}</span></button>`).join('')}</div>
+  ${body}`;
+}
+
+function sellingTable(rows) {
+  const S = state.settings;
+  const floor = floorPrice(S, state.games);
+  const n = seatCount();
+  const fee = feePct(S, 'Ticketmaster');
+  const open = rows.filter(g => g.soldPrice == null), sold = rows.filter(g => g.soldPrice != null);
+  const L = open.map(g => ({ g, L: ladder(g, state.prices, state.mult, S, floor) }));
+  const cap = Number(S.resaleCap) || 0, planned = resalesPlanned();
+  const potential = L.reduce((a, { L }) => a + (L.now.value || 0), 0) * n * (1 - fee / 100);
+  const needUpdate = L.filter(({ g, L }) => g.listPrice != null && L.now.value != null && g.listPrice !== L.now.value).length;
+  const notListed = L.filter(({ g }) => g.listPrice == null).length;
+  const head = `<tr><th class="sticky">Game</th><th>Out</th><th class="r" title="Cheapest comparable pair on Vivid Seats (rows 1–3, center sections), fees included">Comp<br><small>all-in</small></th>
+    ${STEPS.map(st => `<th class="r">${st.label}<br><small>${st.key === 'pStretch' ? '>2 wk' : st.key === 'p2wk' ? '2 wk–5 d' : st.key === 'p5d' ? '5 d–48 h' : 'last 48 h'}</small></th>`).join('')}
+    <th class="r">Listed<br><small>on TM</small></th><th class="r">You net<br><small>${n} tix now</small></th><th>Plan</th></tr>`;
+  const row = ({ g, L }) => {
+    const h = L.hours;
+    const listed = g.listPrice;
+    const off = listed != null && L.now.value != null && listed !== L.now.value;
+    const action = listed == null ? `<span class="act list">List $${L.now.value ?? '—'}</span>` : off ? `<span class="act move">${listed > L.now.value ? '↓' : '↑'} $${L.now.value}</span>` : '<span class="act ok">✓</span>';
+    return `<tr class="${h < 48 ? 'hot' : ''}">
+      <td class="sticky">${gameCell(g)}</td>
+      <td class="nowrap ${h < 120 ? 'warn-t' : ''}">${outLabel(h)}</td>
+      <td class="r"><input class="cell-in" type="number" inputmode="decimal" data-gid="${g.id}" data-k="comp" value="${g.comp ?? ''}" placeholder="—" title="${g.compAt ? 'Checked ' + esc(g.compAt) : 'Not checked yet'}" aria-label="Comparable price"></td>
+      ${L.steps.map((st, i) => `<td class="r step ${i === L.current ? 'now' : i < L.current ? 'done' : ''}"><input class="cell-in ${st.overridden ? 'set' : ''}" type="number" inputmode="decimal" data-gid="${g.id}" data-k="${st.key}" value="${st.overridden ? st.value : ''}" placeholder="${st.auto ?? '—'}" aria-label="${st.label} price"></td>`).join('')}
+      <td class="r"><div class="listed"><input class="cell-in" type="number" inputmode="decimal" data-gid="${g.id}" data-k="listPrice" value="${listed ?? ''}" placeholder="—" aria-label="Listed price">${action}</div></td>
+      <td class="r nowrap">${money(netPayout(L.now.value, n, fee))}${L.nextAt ? `<small class="muted block">→ $${L.next.value} ${shortWhen(g, L.nextAt)}</small>` : ''}</td>
+      <td>${assignSelect(g)}</td>
+    </tr>`;
+  };
+  const soldRow = g => {
+    const qty = g.qtySold || n;
+    return `<tr class="sold-row"><td class="sticky">${gameCell(g)}</td>
+      <td colspan="7" class="muted">Sold ${qty} on ${esc(g.platform || '—')} for ${money(g.soldPrice)} each${g.soldOn ? ' · ' + esc(g.soldOn) : ''} · ${g.transferred ? 'transferred' : '<b class="bad">not transferred</b>'} · ${g.paid ? 'paid' : 'payout pending'}</td>
+      <td class="r">${money(g.payout ?? netPayout(g.soldPrice, qty, feePct(S, g.platform)))}</td><td>${assignSelect(g)}</td></tr>`;
+  };
+  return `
+  <div class="strip">
+    <span><b>${open.length}</b> to sell</span>
+    <span><b>${sold.length}</b> sold</span>
+    <span class="${cap && planned > cap ? 'bad' : ''}"><b>${planned}</b> / ${cap || '—'} resale cap</span>
+    <span><b>${money(potential)}</b> net if all sell at today's step</span>
+    ${needUpdate ? `<span class="warn-t"><b>${needUpdate}</b> listing${needUpdate > 1 ? 's' : ''} to reprice</span>` : ''}
+    ${notListed ? `<span><b>${notListed}</b> not listed yet</span>` : ''}
+    <span class="muted">${floor ? `Floor ${money(floor)}/ticket (your cost)` : '<a href="#/settings">Add season cost</a> to set a price floor'}</span>
+  </div>
+  <div class="sheet-wrap"><table class="sheet">
+    <thead>${head}</thead>
+    <tbody>${L.map(row).join('') || `<tr><td colspan="10" class="muted pad">Nothing marked to sell.</td></tr>`}
+    ${sold.length ? `<tr class="group"><td colspan="10">Sold</td></tr>${sold.map(soldRow).join('')}` : ''}</tbody>
+  </table></div>
+  <p class="muted small legend-p">Prices are what you type into Ticketmaster (you keep ${100 - fee}%). Grey numbers come from the 2-week price: Stretch is 15% above it, 5-day is 15% below, 48-hour is 30% below${floor ? ', never under your floor' : ''}. Type into any cell to override it; clear it to go back to automatic. The highlighted column is the price in effect right now. <b>Comp</b> is the cheapest similar pair on Vivid Seats (rows 1–3, center sections), fees included. With no comp, the 2-week price is estimated from the arena's cheapest ticket × ${state.mult.value.toFixed(2)} (${esc(state.mult.basis)}).</p>`;
+}
+
+function goingTable(rows, tab) {
+  const n = seatCount();
+  const names = [...new Set(state.games.flatMap(holders).filter(x => x !== P1 && x !== P2))];
+  const total = rows.reduce((a, g) => a + (estimate({ ...g, soldPrice: null }, state.prices, state.mult).value || 0), 0);
+  const who = tab === 'p1' ? P1 : tab === 'p2' ? P2 : null;
+  const head = `<tr><th class="sticky">Game</th><th>Time</th><th>Out</th>${Array.from({ length: n }, (_, i) => `<th>Seat ${i + 1}</th>`).join('')}<th class="r">Value<br><small>per ticket</small></th><th>Plan</th><th>Note</th></tr>`;
+  const row = g => {
+    const v = estimate({ ...g, soldPrice: null }, state.prices, state.mult).value;
+    const h = hoursUntil(g);
+    return `<tr>
+      <td class="sticky">${gameCell(g)}</td>
+      <td class="nowrap muted">${esc(g.time)}</td>
+      <td class="nowrap">${isPast(g) ? 'Final' : outLabel(h)}</td>
+      ${Array.from({ length: n }, (_, i) => `<td><input class="cell-in name ${g.seats[i] === P1 ? 'p1' : g.seats[i] === P2 ? 'p2' : g.seats[i] ? 'guest' : ''}" list="strat-names" data-gid="${g.id}" data-seat="${i}" value="${esc(g.seats[i] || '')}" placeholder="empty" aria-label="Seat ${i + 1}"></td>`).join('')}
+      <td class="r">${money(v)}</td>
+      <td>${assignSelect(g)}</td>
+      <td><input class="cell-in note" data-gid="${g.id}" data-k="note" value="${esc(g.note)}" placeholder="—" aria-label="Note"></td>
+    </tr>`;
+  };
+  const empty = rows.filter(g => holders(g).length < n).length;
+  return `
+  <div class="strip">
+    <span><b>${rows.length}</b> games${who ? ` for ${esc(who)}` : ''}</span>
+    <span><b>${money(total * (who ? 1 : n))}</b> ${who ? `of ticket value for ${esc(who)}` : 'of ticket value'}</span>
+    ${empty ? `<span class="warn-t"><b>${empty}</b> with an empty seat</span>` : ''}
+  </div>
+  <datalist id="strat-names">${[P1, P2, ...names].map(x => `<option value="${esc(x)}">`).join('')}</datalist>
+  <div class="sheet-wrap"><table class="sheet">
+    <thead>${head}</thead>
+    <tbody>${rows.map(row).join('') || `<tr><td colspan="9" class="muted pad">No games here yet.</td></tr>`}</tbody>
+  </table></div>
+  <p class="muted small legend-p">Change the Plan dropdown to move a game between tabs. Type a guest's name into a seat. Click a game for the full details.</p>`;
+}
+
+// Apply a Plan dropdown choice.
+function assign(g, choice) {
+  const guest = holders(g).find(x => x !== P1 && x !== P2) || 'Guest';
+  if (choice === 'both') Object.assign(g, { plan: 'use', seats: [P1, P2] });
+  else if (choice === 'p1') Object.assign(g, { plan: 'use', seats: [P1, guest] });
+  else if (choice === 'p2') Object.assign(g, { plan: 'use', seats: [P2, guest] });
+  else if (choice === 'sell') Object.assign(g, { plan: 'sell', platform: g.platform || state.settings.defaultPlatform || 'Ticketmaster' });
+  else if (choice === 'undecided') g.plan = 'undecided';
+  if (choice === 'both' || choice === 'p1') g.interest[P1] = true;
+  if (choice === 'both' || choice === 'p2') g.interest[P2] = true;
+}
+
+// Re-render while keeping focus on the same cell, so tabbing through the sheet works.
+function renderKeepFocus() {
+  setTimeout(() => {
+    const a = document.activeElement;
+    const key = a?.dataset?.gid ? `[data-gid="${a.dataset.gid}"]${a.dataset.k ? `[data-k="${a.dataset.k}"]` : a.dataset.seat != null ? `[data-seat="${a.dataset.seat}"]` : '[data-assign]'}` : null;
+    const y = window.scrollY, sx = $('.sheet-wrap')?.scrollLeft || 0;
+    render();
+    window.scrollTo(0, y);
+    const w = $('.sheet-wrap');
+    if (w) w.scrollLeft = sx;
+    if (key) { const el = document.querySelector(key); el?.focus(); el?.select?.(); }
+  }, 0);
+}
+
+// One-time import of what we learned from Ticketmaster Account Manager on Oct 20, 2026.
+async function migrate() {
+  const S = state.settings;
+  if (Number(S.settingsVersion) >= 2) return;
+  Object.assign(S, { section: S.section || '201', row: S.row || '2', seats: S.seats || '3-4', feeTicketmaster: 10, defaultPlatform: 'Ticketmaster', tmBuyerFee: S.tmBuyerFee || 20, settingsVersion: 2 });
+  const known = { '10/22/2026': [500, 444], '10/25/2026': [254, 199], '10/30/2026': [650, 375] };
+  const changed = [];
+  for (const g of state.games) {
+    const k = known[g.date];
+    if (!k || g.soldPrice != null) continue;
+    if (g.listPrice == null) Object.assign(g, { platform: 'Ticketmaster', listPrice: k[0], plan: 'sell' });
+    if (g.comp == null) Object.assign(g, { comp: k[1], compAt: '2026-10-20' });
+    changed.push(g);
+  }
+  try {
+    await store.saveSettings(S);
+    for (const g of changed) await store.saveGame(g, state.user.name);
+  } catch (e) { console.warn('migrate', e); }
+  setSeatCount(S.seatCount);
 }
 
 // ---- Home
@@ -733,6 +930,7 @@ async function action(act, arg) {
     case 'filter': state.filter = arg; return state.view === 'games' ? render() : go('games');
     case 'mode': state.gamesMode = arg; return render();
     case 'msort': state.marketSort = arg; return render();
+    case 'strat': state.stratTab = arg; return render();
     case 'savesettings': return saveSettings();
     case 'demoreset': store.reset(); return loadAll();
     case 'demoswap': state.user = { ...state.user, name: state.user.name === P1 ? P2 : P1 }; toast(`Viewing as ${state.user.name}`); return render();
@@ -771,6 +969,8 @@ async function action(act, arg) {
 
 function onChange(e) {
   const el = e.target;
+  if (el.dataset.actCheck === 'showpast') { state.showPast = el.checked; return render(); }
+  if (el.dataset.gid) return onCellChange(el);
   if (el.dataset.set) {
     state.settings[el.dataset.set] = el.value;
     return;
@@ -791,6 +991,23 @@ function onChange(e) {
     if (['platform', 'listPrice', 'soldPrice', 'qtySold'].includes(el.dataset.f)) refreshDrawer();
     persist(g);
   }
+}
+
+// Inline edits in the Strategy sheets.
+function onCellChange(el) {
+  const g = state.games.find(x => x.id === el.dataset.gid);
+  if (!g) return;
+  if (el.dataset.assign != null) assign(g, el.value);
+  else if (el.dataset.seat != null) { const seats = [...g.seats]; seats[+el.dataset.seat] = el.value.trim(); g.seats = seats; }
+  else if (el.dataset.k === 'note') g.note = el.value;
+  else {
+    const k = el.dataset.k, v = el.value === '' ? null : Number(el.value);
+    g[k] = Number.isFinite(v) ? v : null;
+    if (k === 'comp') { g.compAt = g.comp == null ? '' : new Date().toLocaleDateString('en-CA'); state.mult = seatMultiplier(state.games, state.prices, state.settings); }
+    if (k === 'listPrice') { g.platform ||= 'Ticketmaster'; if (g.listPrice != null && !g.listedOn) g.listedOn = new Date().toLocaleDateString('en-CA'); }
+  }
+  persist(g);
+  renderKeepFocus();
 }
 
 function onInput(e) {

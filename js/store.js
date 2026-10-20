@@ -9,9 +9,11 @@ export class AuthError extends Error {}
 
 // Columns of the app-owned tab, in order.
 const APP_COLS = ['date', 'opponent', 'plan', 'seat1', 'seat2', 'seat3', 'seat4', 'platform', 'listPrice', 'listedOn',
-  'soldPrice', 'qtySold', 'fees', 'payout', 'buyer', 'soldOn', 'transferred', 'paid', 'updatedBy', 'updatedAt'];
+  'soldPrice', 'qtySold', 'fees', 'payout', 'buyer', 'soldOn', 'transferred', 'paid', 'updatedBy', 'updatedAt',
+  'comp', 'compAt', 'pStretch', 'p2wk', 'p5d', 'p48h'];
 const APP_HEADERS = ['Date', 'Opponent', 'Plan', 'Seat 1', 'Seat 2', 'Seat 3', 'Seat 4', 'Platform', 'List Price (ea)', 'Listed On',
-  'Sold Price (ea)', 'Qty Sold', 'Fees', 'Payout', 'Buyer', 'Sold On', 'Transferred', 'Paid Out', 'Updated By', 'Updated At'];
+  'Sold Price (ea)', 'Qty Sold', 'Fees', 'Payout', 'Buyer', 'Sold On', 'Transferred', 'Paid Out', 'Updated By', 'Updated At',
+  'Comparable (all-in)', 'Comparable Checked', 'Stretch Price', '2-Week Price', '5-Day Price', '48-Hour Price'];
 
 // Header names in the existing "Home Games" tab we read (and the ones we write back).
 const H = {
@@ -34,6 +36,8 @@ function appValues(g, who) {
     soldPrice: g.soldPrice ?? '', qtySold: g.qtySold ?? '', fees: g.fees ?? '', payout: g.payout ?? '',
     buyer: g.buyer || '', soldOn: g.soldOn || '', transferred: g.transferred ? 'TRUE' : 'FALSE', paid: g.paid ? 'TRUE' : 'FALSE',
     updatedBy: who, updatedAt: nowStamp(),
+    comp: g.comp ?? '', compAt: g.compAt || '',
+    pStretch: g.pStretch ?? '', p2wk: g.p2wk ?? '', p5d: g.p5d ?? '', p48h: g.p48h ?? '',
   };
 }
 
@@ -83,7 +87,7 @@ export class SheetStore {
 
   async load() {
     await this.ensureTabs();
-    const ranges = [`${q(CONFIG.GAMES_TAB)}!A1:Z120`, `${q(CONFIG.APP_TAB)}!A1:T300`, `${q(CONFIG.SETTINGS_TAB)}!A1:B100`]
+    const ranges = [`${q(CONFIG.GAMES_TAB)}!A1:Z120`, `${q(CONFIG.APP_TAB)}!A1:${colLetter(APP_COLS.length - 1)}300`, `${q(CONFIG.SETTINGS_TAB)}!A1:B100`]
       .map(r => 'ranges=' + encodeURIComponent(r)).join('&');
     const res = await this.api(`/values:batchGet?${ranges}&valueRenderOption=FORMATTED_VALUE`);
     const [gamesV, appV, setV] = res.valueRanges.map(v => v.values || []);
@@ -112,11 +116,21 @@ export class SheetStore {
       app[r[0]] = o;
     });
     this.appRows = Math.max(1, appV.length);
+    // Tabs created by an older version have fewer columns; extend the header row.
+    if ((appV[0] || []).length < APP_HEADERS.length) {
+      await this.api(`/values/${encodeURIComponent(`${q(CONFIG.APP_TAB)}!A1`)}?valueInputOption=RAW`, { method: 'PUT', body: { values: [APP_HEADERS] } });
+    }
 
     const settings = { ...DEFAULT_SETTINGS };
     setV.slice(1).forEach(([k, v]) => { if (k) settings[k] = v ?? ''; });
 
     const games = rows.map(r => makeGame(r, app[r.date])).filter(g => g.dateObj);
+    // Games added in the app (e.g. the NBA Cup date) live only in the app tab.
+    const known = new Set(rows.map(r => r.date));
+    for (const [date, a] of Object.entries(app)) {
+      if (known.has(date) || !/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(date)) continue;
+      games.push(makeGame({ date, opp: a.opponent, time: a.time || '7:00 PM', doing: '', price: '' }, a));
+    }
     return { games, settings };
   }
 
@@ -168,11 +182,6 @@ export class DemoStore {
       if (saved?.sheet?.[id]) Object.assign(g, { interest: saved.sheet[id].interest, note: saved.sheet[id].note });
       return g;
     });
-    // A sample sale so the ledger and sales views have something to show.
-    if (!saved?.app?.['10/22/2026']) {
-      const cle = games.find(g => g.opp === 'Cleveland Cavaliers');
-      Object.assign(cle, { platform: 'StubHub', listPrice: 340, listedOn: '2026-10-05', soldPrice: 320, qtySold: 2, soldOn: '2026-10-15', buyer: 'StubHub buyer', transferred: true });
-    }
     this.state = { saved: saved || { app: {}, sheet: {}, settings: {}, extra: [] }, games };
     return { games, settings };
   }

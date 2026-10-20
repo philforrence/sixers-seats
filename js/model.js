@@ -17,6 +17,8 @@ export const DEFAULT_SETTINGS = {
   resaleCap: 7,           // 2026-27 full-season resale allowance (Inquirer, Sep 2026); 10 last season
   exchangeCap: 10,
   exchangesUsed: 0,
+  tmBuyerFee: 20,         // approx. % Ticketmaster adds on top of your list price for buyers
+  settingsVersion: 0,
 };
 
 export const PLATFORMS = ['Ticketmaster', 'StubHub', 'SeatGeek', 'Vivid', 'TickPick', 'Friend / Venmo', 'Other'];
@@ -105,6 +107,7 @@ export function makeGame(row, app) {
     seats: parsed.seats,
     platform: '', listPrice: null, listedOn: '', soldPrice: null, qtySold: null, fees: null,
     payout: null, buyer: '', soldOn: '', transferred: false, paid: false, updatedBy: '', updatedAt: '', appRow: null,
+    comp: null, compAt: '', pStretch: null, p2wk: null, p5d: null, p48h: null,
   };
   if (app) {
     Object.assign(g, {
@@ -124,6 +127,12 @@ export function makeGame(row, app) {
       updatedBy: app.updatedBy || '',
       updatedAt: app.updatedAt || '',
       appRow: app.appRow,
+      comp: num(app.comp),
+      compAt: app.compAt || '',
+      pStretch: num(app.pStretch),
+      p2wk: num(app.p2wk),
+      p5d: num(app.p5d),
+      p48h: num(app.p48h),
     });
   }
   return g;
@@ -158,11 +167,22 @@ export function seatMultiplier(games, prices, settings) {
     if (!m?.history?.length) continue;
     if (g.soldPrice != null) {
       const at = nearestSnapshot(m.history, g.soldOn) || m.history[m.history.length - 1];
-      if (at?.low) ratios.push(['sale', g.soldPrice / at.low]);
+      // Ticketmaster prices are before buyer fees; market prices include them.
+      const allIn = /ticketmaster/i.test(g.platform) ? g.soldPrice * (1 + (Number(settings.tmBuyerFee) || 0) / 100) : g.soldPrice;
+      if (at?.low) ratios.push(['sale', allIn / at.low]);
     }
   }
   const sales = ratios.filter(r => r[0] === 'sale').map(r => r[1]);
   if (sales.length >= 2) return { value: median(sales), basis: `learned from ${sales.length} sales` };
+  // Comparable listings (cheapest similar pair, all-in) vs. that game's get-in price.
+  const comps = [];
+  for (const g of games) {
+    const m = market(prices, g);
+    if (g.comp == null || !m) continue;
+    const at = nearestSnapshot(m.history || [], g.compAt) || m;
+    if (at?.low) comps.push(g.comp / at.low);
+  }
+  if (comps.length) return { value: median(comps), basis: `comparable listings in ${comps.length} game${comps.length > 1 ? 's' : ''}` };
   const base = [];
   for (const g of games) {
     const m = market(prices, g);
@@ -255,3 +275,51 @@ export function ledger(games, prices, mult, settings) {
 }
 
 export const money = (n, dp = 0) => n == null || !Number.isFinite(n) ? '—' : (n < 0 ? '-' : '') + '$' + Math.abs(n).toLocaleString('en-US', { minimumFractionDigits: dp, maximumFractionDigits: dp });
+
+// --- Price ladder -----------------------------------------------------------
+// Each game you sell steps down as it gets closer: Stretch until 2 weeks out, then the
+// 2-week ("Fair") price, the 5-day price, and finally the 48-hour price. Prices are what
+// you type into Ticketmaster (before their buyer fees). Any step can be overridden per game.
+
+export const STEPS = [
+  { key: 'pStretch', label: 'Stretch', short: '2 wk+', fromHours: Infinity, factor: 1.15 },
+  { key: 'p2wk', label: '2 weeks', short: '2 wk', fromHours: 14 * 24, factor: 1 },
+  { key: 'p5d', label: '5 days', short: '5 day', fromHours: 5 * 24, factor: 0.85 },
+  { key: 'p48h', label: '48 hours', short: '48 hr', fromHours: 48, factor: 0.7 },
+];
+
+const round5 = n => Math.round(n / 5) * 5;
+export const hoursUntil = (g, now = new Date()) => (startTime(g) - now) / 3600e3;
+
+// Per-ticket cost of one seat for one game, from the season cost.
+export function floorPrice(settings, games) {
+  const cost = Number(settings.seasonCost) || 0;
+  const seats = Number(settings.seatCount) || 2;
+  return cost ? Math.round(cost / seats / Math.max(games.length, 1)) : null;
+}
+
+// The anchor ("Fair", the 2-week price) as a Ticketmaster list price.
+export function fairAnchor(g, prices, mult, settings) {
+  const buyerFee = 1 + (Number(settings.tmBuyerFee) || 0) / 100;
+  if (g.p2wk != null) return { value: g.p2wk, basis: 'set' };
+  if (g.comp != null) return { value: round5(g.comp / buyerFee), basis: 'comps' };
+  const m = market(prices, g);
+  if (m?.low) return { value: round5((m.low * mult.value) / buyerFee), basis: 'est.' };
+  if (g.baseline) return { value: round5(g.baseline), basis: 'sheet' };
+  return { value: null, basis: 'none' };
+}
+
+export function ladder(g, prices, mult, settings, floor, now = new Date()) {
+  const fair = fairAnchor(g, prices, mult, settings);
+  const h = hoursUntil(g, now);
+  const steps = STEPS.map(st => {
+    const auto = fair.value == null ? null : Math.max(round5(fair.value * st.factor), floor || 0);
+    return { ...st, value: g[st.key] ?? auto, auto, overridden: g[st.key] != null };
+  });
+  // The step in effect right now is the last one whose window has started.
+  let current = 0;
+  steps.forEach((st, i) => { if (h <= st.fromHours) current = i; });
+  const next = steps[current + 1];
+  const nextAt = next ? new Date(startTime(g).getTime() - next.fromHours * 3600e3) : null;
+  return { fair, steps, current, now: steps[current], next, nextAt, hours: h };
+}
