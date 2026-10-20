@@ -2,7 +2,7 @@
 export const CONFIG = {
   // OAuth 2.0 Web client ID from Google Cloud Console, e.g. "1234-abc.apps.googleusercontent.com".
   // Leave empty to run in demo mode (sample data saved in this browser only).
-  CLIENT_ID: '',
+  CLIENT_ID: '205553819526-t0rlpa1omlc3qk4qdafprsum22ma3pi1.apps.googleusercontent.com',
 
   // The Google Sheet that holds everything. Both partners need edit access to it.
   SHEET_ID: '1MFwX0YZbs3yw6AoKuOPa9acs9t8jA0Fhe2Dyuzoyu-g',
