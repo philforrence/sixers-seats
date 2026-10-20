@@ -408,10 +408,6 @@ a.comp-link:hover { text-decoration: underline; }
 .sheet tr.past-row td { opacity: .55; }
 
 /* tranche stripe on the pinned game cell */
-.sheet tr.t1 td.sticky { box-shadow: inset 4px 0 0 var(--t1), 1px 0 0 var(--line); }
-.sheet tr.t2 td.sticky { box-shadow: inset 4px 0 0 var(--t2), 1px 0 0 var(--line); }
-.sheet tr.t3 td.sticky { box-shadow: inset 4px 0 0 var(--t3), 1px 0 0 var(--line); }
-.sheet tr.hot td.sticky { box-shadow: inset 4px 0 0 var(--c-selling), 1px 0 0 var(--line); }
 
 /* marker rows: a thick line across the sheet with a flag pinned at the left end */
 .sheet tr.mk td { padding: 0; height: 16px; border-bottom: 0; background: transparent !important; }
@@ -439,3 +435,71 @@ a.comp-link:hover { text-decoration: underline; }
 .comp-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; margin: 4px 0 12px; padding: 10px 12px; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; }
 .comp-row .label { width: 100%; margin: 0; }
 .comp-row .money-in .cell-in { border-color: var(--line); }
+
+/* ---------- Days-to-game windows (14 / 5 / 2) */
+:root { --w14: #CA8A04; --w5: #EA580C; --w2: #DC2626; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --w14: #FACC15; --w5: #FB923C; --w2: #F87171; } }
+:root[data-theme="dark"] { --w14: #FACC15; --w5: #FB923C; --w2: #F87171; }
+.sheet tr.w14 td.sticky { box-shadow: inset 5px 0 0 var(--w14), 1px 0 0 var(--line); }
+.sheet tr.w5 td.sticky { box-shadow: inset 5px 0 0 var(--w5), 1px 0 0 var(--line); }
+.sheet tr.w2 td.sticky { box-shadow: inset 5px 0 0 var(--w2), 1px 0 0 var(--line); }
+.sheet tr.w14 td { background: color-mix(in srgb, var(--w14) 7%, var(--surface)); }
+.sheet tr.w5 td { background: color-mix(in srgb, var(--w5) 9%, var(--surface)); }
+.sheet tr.w2 td { background: color-mix(in srgb, var(--w2) 11%, var(--surface)); }
+.sheet tr.w14 td.sticky, .sheet tr.w5 td.sticky, .sheet tr.w2 td.sticky { background: var(--surface); }
+.win { display: inline-block; font-size: 12px; font-weight: 700; padding: 2px 8px; border-radius: 999px; background: var(--surface-2); color: var(--muted); white-space: nowrap; }
+.win.w14 { background: color-mix(in srgb, var(--w14) 20%, transparent); color: var(--w14); }
+.win.w5 { background: color-mix(in srgb, var(--w5) 20%, transparent); color: var(--w5); }
+.win.w2 { background: color-mix(in srgb, var(--w2) 22%, transparent); color: var(--w2); }
+.win-legend { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 12px; color: var(--muted); }
+.win-legend span { display: inline-flex; align-items: center; gap: 6px; }
+.win-dot { width: 10px; height: 10px; border-radius: 3px; background: var(--line); display: inline-block; }
+.win-dot.w14 { background: var(--w14); } .win-dot.w5 { background: var(--w5); } .win-dot.w2 { background: var(--w2); }
+.hook-cell { white-space: normal; min-width: 160px; max-width: 260px; font-size: 13px; color: var(--text); }
+.sell-sheet td { height: 44px; }
+
+/* ---------- Thermometers */
+.thermos { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; }
+.thermo { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px; display: grid; gap: 8px; box-shadow: var(--shadow); }
+.t-top { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.t-top .label { margin: 0; font-weight: 600; }
+.t-val { font-family: var(--display); font-size: 28px; font-weight: 800; }
+.t-val small { font-family: var(--font); font-size: 14px; font-weight: 500; color: var(--muted); }
+.t-tube { position: relative; height: 18px; border-radius: 999px; background: var(--surface-2); overflow: hidden; }
+.t-fill { position: absolute; inset: 0 auto 0 0; border-radius: 999px; background: linear-gradient(90deg, var(--blue), var(--accent)); min-width: 6px; transition: width .6s cubic-bezier(.2,.8,.2,1); }
+.thermo.rev .t-fill { background: linear-gradient(90deg, #0f8a4b, var(--good)); }
+.thermos.compact .thermo { padding: 10px 14px; gap: 6px; }
+.thermos.compact .t-val { font-size: 22px; }
+.thermos.compact .t-tube { height: 12px; }
+
+/* ---------- Modal (pitch, sale) */
+.modal { position: fixed; z-index: 45; inset: auto 0 0 0; max-height: 92vh; overflow-y: auto; background: var(--bg); border-radius: 20px 20px 0 0; border: 1px solid var(--line); box-shadow: 0 -10px 40px rgba(0,0,0,.3); animation: up .22s cubic-bezier(.2,.8,.2,1); padding-bottom: env(safe-area-inset-bottom); }
+@media (min-width: 760px) { .modal { inset: 50% auto auto 50%; transform: translate(-50%, -50%); width: min(720px, 94vw); border-radius: 20px; animation: fade .15s ease; } .modal.small-modal { width: min(520px, 94vw); } }
+.m-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 16px 18px; border-bottom: 1px solid var(--line); position: sticky; top: 0; background: var(--bg); z-index: 1; }
+.m-head h2 { margin: 0; font-size: 26px; }
+.m-body { padding: 16px 18px 20px; display: grid; gap: 14px; }
+.m-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; }
+.m-row { display: grid; gap: 6px; }
+.m-row .label { margin: 0; }
+.m-row .seg { flex-wrap: wrap; }
+.pct-in { display: inline-flex; align-items: center; gap: 6px; }
+.pct-in input { width: 80px; }
+.price-line { font-size: 16px; margin: 0; }
+.price-line b { font-family: var(--display); font-size: 24px; }
+.modal textarea { font-size: 16px; line-height: 1.45; }
+.money-in.big .cell-in { width: 100%; font-size: 16px; border: 1px solid var(--line); background: var(--surface); text-align: left; }
+.money-in.big { width: 100%; gap: 6px; }
+
+/* ---------- Contacts */
+.group-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.gchip { font-size: 13px; padding: 6px 12px; border-radius: 999px; background: var(--surface); border: 1px solid var(--line); color: var(--muted); }
+.gchip b { color: var(--text); margin-right: 4px; }
+.gchip.total { border-color: var(--accent); }
+.add-row { display: grid; grid-template-columns: 1.4fr 1fr 1.4fr 1fr auto; gap: 8px; }
+@media (max-width: 760px) { .add-row { grid-template-columns: 1fr 1fr; } .add-row .btn { grid-column: 1 / -1; } }
+.cell-in.txt { text-align: left; width: 130px; }
+.cell-in.wide-in { width: 200px; }
+.cell-in.name-in { text-align: left; width: 150px; font-weight: 600; }
+.sheet-wrap.flat { box-shadow: none; }
+.sheet tr.pending-row td { color: var(--muted); }
+.sheet td .btn.small { min-height: 30px; padding: 0 12px; font-size: 13px; }

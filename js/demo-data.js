@@ -42,3 +42,23 @@ export const DEMO_ROWS = [
   ['4/4/2027', 'Sun', 'Atlanta Hawks', '1:00 PM', '', '', '', 0, 0, 1, 1, '', 85],
   ['4/11/2027', 'Sun', 'Charlotte Hornets', '6:00 PM', '', '', '', 0, 0, 1, 1, '', 111],
 ];
+
+// Made-up contacts for demo mode and screenshots. No real people: 555 numbers, example.com emails.
+export const DEMO_CONTACTS = [
+  ['Maggie Rowan', '(215) 555-0142', 'maggie.rowan@example.com', 'Family'],
+  ['Tom Rowan', '(215) 555-0178', 'tom.rowan@example.com', 'Family'],
+  ['Aunt Bev', '(610) 555-0113', 'bev@example.com', 'Family'],
+  ['Cousin Danny', '(610) 555-0190', 'danny@example.com', 'Family'],
+  ['Priya Shah', '(267) 555-0121', 'priya.shah@example.com', 'Work'],
+  ['Marcus Bell', '(267) 555-0167', 'marcus.bell@example.com', 'Work'],
+  ['Jen Okafor', '(484) 555-0109', 'jen.okafor@example.com', 'Work'],
+  ['Kevin Liu', '(215) 555-0133', 'kevin.liu@example.com', 'Friends'],
+  ['Sam Ortega', '(814) 555-0184', 'sam.ortega@example.com', 'Friends'],
+  ['Becca Hart', '(814) 555-0156', 'becca.hart@example.com', 'Friends'],
+  ['Luis & Ana', '(215) 555-0127', 'luis.ana@example.com', 'Neighbors'],
+  ['Chris Doyle', '(215) 555-0195', 'chris.doyle@example.com', 'Neighbors'],
+  ['Nina Park', '(267) 555-0148', 'nina.park@example.com', 'Friends'],
+  ['Owen Price', '(267) 555-0172', 'owen.price@example.com', 'Friends'],
+  ['Hannah Cole', '(215) 555-0116', 'hannah.cole@example.com', 'Friends'],
+  ['Raj Patel', '(215) 555-0139', 'raj.patel@example.com', 'Friends'],
+];

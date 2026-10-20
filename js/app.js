@@ -3,9 +3,10 @@ import * as auth from './auth.js';
 import { SheetStore, DemoStore, AuthError } from './store.js';
 import { loadPrices, absorbed, searchLinks } from './prices.js';
 import { team, TEAM_NAMES } from './teams.js';
+import { TYPES, VARIANTS, buildMessage, defaultHook, splitEmail, firstName } from './messages.js';
 import {
   status, STATUS_LABEL, isPast, daysUntil, startTime, holders, estimate, trend, seatMultiplier, market,
-  netPayout, feePct, ledger, money, PLATFORMS, setSeatCount, parseDate, STEPS, ladder, floorPrice, hoursUntil, FRIEND, applyComps, tranches, trancheOf,
+  netPayout, feePct, ledger, money, PLATFORMS, setSeatCount, parseDate, STEPS, ladder, floorPrice, hoursUntil, FRIEND, applyComps, tranches, trancheOf, friendPrice, ffPrice, windowOf, WINDOW_LABEL, saleDone, received,
 } from './model.js';
 
 const [P1, P2] = CONFIG.PARTNERS;
@@ -14,7 +15,7 @@ const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': 
 
 const state = {
   user: null, games: [], settings: {}, prices: { games: {} }, mult: { value: 1, basis: 'default' },
-  view: 'strategy', stratTab: 'all', showPast: false, open: null, filter: 'upcoming', gamesMode: 'list', marketSort: 'value', loading: true, error: '',
+  view: 'sell', sellFilter: 'sell', contacts: [], hooks: null, pitch: null, saleForm: null, stratTab: 'all', showPast: false, open: null, filter: 'upcoming', gamesMode: 'list', marketSort: 'value', loading: true, error: '',
 };
 const store = DEMO ? new DemoStore() : new SheetStore();
 
@@ -26,6 +27,7 @@ async function boot() {
   document.addEventListener('change', onChange);
   document.addEventListener('input', onInput);
   document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && (state.pitch || state.saleForm)) { state.pitch = null; state.saleForm = null; return renderModal(); }
     if (e.key === 'Escape' && state.open) closeGame();
     // Enter in a sheet cell commits it, like a spreadsheet.
     if (e.key === 'Enter' && e.target.classList?.contains('cell-in')) e.target.blur();
@@ -65,6 +67,8 @@ async function loadAll() {
     state.prices = await loadPrices({ demo: DEMO, baselines });
     applyComps(state.games, state.prices);
     await migrate();
+    try { const r = await fetch('data/hooks.json', { cache: 'no-cache' }); if (r.ok) state.hooks = await r.json(); } catch {}
+    try { state.contacts = await store.loadContacts(state.user.name); } catch (e) { console.warn('contacts', e); }
     state.mult = seatMultiplier(state.games, state.prices, state.settings);
   } catch (e) {
     if (e instanceof AuthError) state.user = null;
@@ -110,7 +114,7 @@ async function saveSettings() {
 
 function route(doRender = true) {
   const [view, id] = location.hash.replace(/^#\/?/, '').split('/');
-  state.view = ['strategy', 'home', 'games', 'market', 'split', 'settings'].includes(view) ? view : 'strategy';
+  state.view = ['sell', 'strategy', 'contacts', 'sales', 'home', 'games', 'market', 'split', 'settings'].includes(view) ? view : 'sell';
   state.open = id || null;
   if (doRender) render();
 }
@@ -204,18 +208,18 @@ function render() {
   if (!state.user) { app.innerHTML = signInView(); return; }
   if (state.loading && !state.games.length) { app.innerHTML = shell('<div class="loading"><div class="ball"></div>Loading your season…</div>'); return; }
   if (state.error && !state.games.length) { app.innerHTML = shell(`<div class="card error"><h2>Something's off</h2><p>${esc(state.error)}</p><button class="btn" data-act="reload">Try again</button></div>`); return; }
-  const views = { strategy: strategyView, home: homeView, games: gamesView, market: marketView, split: splitView, settings: settingsView };
+  const views = { sell: sellView, contacts: contactsView, sales: salesView, strategy: strategyView, home: homeView, games: gamesView, market: marketView, split: splitView, settings: settingsView };
   app.innerHTML = shell(views[state.view]());
   renderDrawer();
+  renderModal();
 }
 
 function shell(content) {
   const nav = [
+    ['sell', 'Sell', '<path d="M3 12l8-8h7v7l-8 8z"/><circle cx="14.5" cy="7.5" r="1.4"/>'],
     ['strategy', 'Strategy', '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M3 14h18M9 9v11M15 9v11"/>'],
-    ['home', 'Home', '<path d="M3 11l9-7 9 7v9a1 1 0 01-1 1h-5v-6H9v6H4a1 1 0 01-1-1z"/>'],
-    ['games', 'Games', '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/>'],
-    ['market', 'Market', '<path d="M4 19l5-6 4 3 7-9"/><path d="M15 7h5v5"/>'],
-    ['split', 'Split', '<circle cx="8" cy="9" r="3.2"/><circle cx="16.5" cy="9" r="3.2"/><path d="M2.5 20c.8-3.4 3-5 5.5-5s4.7 1.6 5.5 5M11.5 16.3c1-.9 2.9-1.3 5-1.3 2.5 0 4.7 1.6 5.5 5"/>'],
+    ['contacts', 'Contacts', '<circle cx="12" cy="8" r="3.5"/><path d="M5 20c.9-3.6 3.7-5.5 7-5.5s6.1 1.9 7 5.5"/>'],
+    ['sales', 'Sales', '<path d="M12 3v18"/><path d="M16.5 7.5c0-1.7-2-3-4.5-3s-4.5 1.3-4.5 3 2 2.6 4.5 3 4.5 1.4 4.5 3.2-2 3-4.5 3-4.5-1.3-4.5-3"/>'],
     ['settings', 'Settings', '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 00.3 1.8l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.7 1.7 0 00-1.8-.3 1.7 1.7 0 00-1 1.5V21a2 2 0 11-4 0v-.1a1.7 1.7 0 00-1.1-1.5 1.7 1.7 0 00-1.8.3l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.7 1.7 0 00.3-1.8 1.7 1.7 0 00-1.5-1H3a2 2 0 110-4h.1a1.7 1.7 0 001.5-1.1 1.7 1.7 0 00-.3-1.8l-.1-.1a2 2 0 112.8-2.8l.1.1a1.7 1.7 0 001.8.3H9a1.7 1.7 0 001-1.5V3a2 2 0 114 0v.1a1.7 1.7 0 001 1.5 1.7 1.7 0 001.8-.3l.1-.1a2 2 0 112.8 2.8l-.1.1a1.7 1.7 0 00-.3 1.8V9a1.7 1.7 0 001.5 1H21a2 2 0 110 4h-.1a1.7 1.7 0 00-1.5 1z"/>'],
   ];
   const links = nav.map(([k, label, icon]) =>
@@ -223,7 +227,7 @@ function shell(content) {
   const u = state.user;
   return `
   <header class="topbar">
-    <a class="brand" href="#/home"><span class="brand-mark">76</span><span>Sixers Seats <em>2026-27</em></span></a>
+    <a class="brand" href="#/sell"><span class="brand-mark">76</span><span>Sixers Seats <em>2026-27</em></span></a>
     <div class="top-right">
       ${DEMO ? '<span class="demo-pill" title="No Google client ID set — data lives in this browser only">Demo</span>' : ''}
       ${state.loading ? '<span class="sync">Syncing…</span>' : ''}
@@ -234,6 +238,7 @@ function shell(content) {
   <main class="content">${content}</main>
   <nav class="tabbar" aria-label="Main">${links.replace(/<a href="#\/settings"[\s\S]*?<\/a>/, '')}</nav>
   <div id="drawer-root"></div>
+  <div id="modal-root"></div>
   <div id="toast" role="status" aria-live="polite"></div>`;
 }
 
@@ -379,7 +384,7 @@ function allTable(rows) {
       ? `<td><input class="cell-in name ${g.seats[i] === P1 ? 'p1' : g.seats[i] === P2 ? 'p2' : g.seats[i] ? 'guest' : ''}" list="strat-names" data-gid="${g.id}" data-seat="${i}" value="${esc(g.seats[i] || '')}" placeholder="empty" aria-label="Seat ${i + 1}"></td>`
       : '<td class="muted">—</td>').join('');
     const priceNow = g.soldPrice != null ? `<b>${money(g.soldPrice)}</b> <small class="muted">sold</small>` : sell ? `<b>${money(L.now.value)}</b> <small class="muted">${L.now.short}</small>` : `<span class="muted" title="What these seats would list for today">${money(L.now.value)}</span>`;
-    return `<tr class="t${tr?.n || 0} ${h < 48 && !isPast(g) ? 'hot' : ''} ${isPast(g) ? 'past-row' : ''}">
+    return `<tr class="${windowOf(g)} ${isPast(g) ? 'past-row' : ''}">
       <td class="sticky">${gameCell(g)}</td>
       <td class="nowrap ${h < 120 && h > 0 ? 'warn-t' : ''}">${isPast(g) ? 'Final' : outLabel(h)}</td>
       <td>${assignSelect(g)}</td>
@@ -422,7 +427,7 @@ function sellingTable(rows) {
     <th>Next drop</th><th class="r">Listed<br><small>on TM</small></th><th>Plan</th></tr>`;
   const row = (g, tr) => {
     const l = L.get(g), h = l.hours;
-    return `<tr class="t${tr?.n || 0} ${h < 48 ? 'hot' : ''}">
+    return `<tr class="${windowOf(g)}">
       <td class="sticky">${gameCell(g)}</td>
       <td class="nowrap ${h < 120 ? 'warn-t' : ''}">${outLabel(h)}</td>
       <td class="r nowrap">${compCell(g)}</td>
@@ -467,7 +472,7 @@ function goingTable(rows, tab) {
   const head = `<tr><th class="sticky">Game</th><th>Time</th><th>Out</th>${Array.from({ length: n }, (_, i) => `<th>Seat ${i + 1}</th>`).join('')}<th class="r" title="What a similar pair sells for, each, fees included — click to open it">Comp<br><small>each, with fees</small></th><th>Plan</th><th>Note</th></tr>`;
   const row = (g, tr) => {
     const h = hoursUntil(g);
-    return `<tr class="t${tr?.n || 0}">
+    return `<tr class="${windowOf(g)}">
       <td class="sticky">${gameCell(g)}</td>
       <td class="nowrap muted">${esc(g.time)}</td>
       <td class="nowrap">${isPast(g) ? 'Final' : outLabel(h)}</td>
@@ -522,8 +527,14 @@ function renderKeepFocus() {
 // One-time import of what we learned from Ticketmaster Account Manager on Oct 20, 2026.
 async function migrate() {
   const S = state.settings;
-  if (Number(S.settingsVersion) >= 2) return;
-  Object.assign(S, { section: S.section || '201', row: S.row || '2', seats: S.seats || '3-4', feeTicketmaster: 10, defaultPlatform: 'Ticketmaster', tmBuyerFee: S.tmBuyerFee || 20, settingsVersion: 2 });
+  if (Number(S.settingsVersion) === 2) {
+    // Oct 20 decisions: assume a 10-game Ticketmaster cap until confirmed; Tranche 1 locked by Nov 1.
+    Object.assign(S, { resaleCap: 10, settingsVersion: 3 });
+    try { await store.saveSettings(S); } catch (e) { console.warn('migrate v3', e); }
+    return;
+  }
+  if (Number(S.settingsVersion) >= 3) return;
+  Object.assign(S, { section: S.section || '201', row: S.row || '2', seats: S.seats || '3-4', feeTicketmaster: 10, defaultPlatform: 'Ticketmaster', tmBuyerFee: S.tmBuyerFee || 20, resaleCap: 10, settingsVersion: 3 });
   const known = { '10/22/2026': [500, 444], '10/25/2026': [254, 199], '10/30/2026': [650, 375] };
   const changed = [];
   for (const g of state.games) {
@@ -538,6 +549,272 @@ async function migrate() {
     for (const g of changed) await store.saveGame(g, state.user.name);
   } catch (e) { console.warn('migrate', e); }
   setSeatCount(S.seatCount);
+}
+
+// ---- Sell: pick a game, get a ready-to-send pitch
+
+const hookFor = g => g.hook || state.hooks?.games?.[g.id]?.hook || defaultHook(g);
+const winChip = g => { const w = windowOf(g); return `<span class="win ${w}" title="${WINDOW_LABEL[w]}">${isPast(g) ? 'Final' : outLabel(hoursUntil(g))}</span>`; };
+
+// Prices for a game at a given ladder step: TM list price, friend price (with fees), F&F price.
+function pitchPrices(g, stepIdx, pct) {
+  const L = ladder(g, state.prices, state.mult, state.settings, floorPrice(state.settings, state.games));
+  const i = stepIdx ?? L.current;
+  const tm = L.steps[i].value, friend = friendPrice(tm, state.settings);
+  return { L, i, tm, friend, ff: ffPrice(friend, pct) };
+}
+
+function sellView() {
+  const all = state.sellFilter === 'all';
+  const rows = state.games.filter(g => !isPast(g) && (all || ((g.plan === 'sell' || g.plan === 'undecided') && g.soldPrice == null)));
+  const pct = Number(state.settings.ffDiscount) || 20;
+  const cols = 8;
+  const row = g => {
+    const p = pitchPrices(g, null, pct), sold = g.soldPrice != null;
+    return `<tr class="${windowOf(g)}">
+      <td class="sticky">${gameCell(g)}</td>
+      <td class="nowrap">${winChip(g)}</td>
+      <td class="hook-cell">${esc(hookFor(g))}</td>
+      <td>${assignSelect(g)}</td>
+      <td class="r nowrap"><b>${money(p.friend)}</b> <small class="muted">${p.L.now.short}</small></td>
+      <td class="r nowrap">${money(p.ff)}</td>
+      <td class="nowrap">${sold ? (saleDone(g) ? '<span class="chip chip-sold">Sold</span>' : '<span class="chip chip-listed">Sale pending</span>') : g.listPrice != null ? `<span class="chip chip-listed">On TM ${money(g.listPrice)}</span>` : ''}</td>
+      <td class="r"><button class="btn small" data-act="pitch:${g.id}">Pitch</button></td>
+    </tr>`;
+  };
+  const head = `<tr><th class="sticky">Game</th><th>Out</th><th>Hook</th><th>Plan</th><th class="r" title="What similar seats cost online, fees included">Friend price<br><small>each, today</small></th><th class="r">F&amp;F<br><small>${pct}% off</small></th><th>Status</th><th></th></tr>`;
+  return `
+  <div class="view-head"><h1>Sell</h1>
+    <div class="seg small">${[['sell', 'To sell'], ['all', 'All upcoming']].map(([k, l]) => `<button class="${(state.sellFilter || 'sell') === k ? 'on' : ''}" data-act="sellf:${k}">${l}</button>`).join('')}</div>
+  </div>
+  ${thermos(true)}
+  <div class="win-legend">${['far', 'w14', 'w5', 'w2'].map(w => `<span><i class="win-dot ${w}"></i>${WINDOW_LABEL[w]}</span>`).join('')}</div>
+  <div class="sheet-wrap"><table class="sheet sell-sheet">
+    <thead>${head}</thead>
+    <tbody>${rows.length ? withMarkers(rows, cols, row) : `<tr><td colspan="${cols}" class="muted pad">Nothing to sell right now.</td></tr>`}</tbody>
+  </table></div>
+  <p class="muted small legend-p">Pick a game and hit <b>Pitch</b> to get a text, email or board post with today's price filled in. Friend price is what similar seats cost online with fees included; F&amp;F takes ${pct}% off (rounded down to $5). One game per person, and the ask is a simple yes or no.</p>`;
+}
+
+function pitchModal() {
+  const P = state.pitch;
+  const g = P && state.games.find(x => x.id === P.id);
+  if (!g) return '';
+  const pr = pitchPrices(g, P.step, P.pct);
+  const contacts = state.contacts || [];
+  const c = contacts.find(x => x.id === P.contactId);
+  if (!P.dirty) P.text = buildMessage(g, { type: P.type, variant: P.variant, price: pr.friend, ff: P.variant === 'come' ? pr.ff : pr.ff, pct: P.pct, hook: hookFor(g), name: c?.name, n: P.n });
+  const groups = [...new Set(contacts.map(x => x.group || 'Other'))];
+  const email = splitEmail(P.text);
+  const smsHref = c?.phone ? `sms:${c.phone.replace(/[^\d+]/g, '')}?&body=${encodeURIComponent(P.text)}` : `sms:?&body=${encodeURIComponent(P.text)}`;
+  const mailHref = `mailto:${encodeURIComponent(c?.email || '')}?subject=${encodeURIComponent(email.subject)}&body=${encodeURIComponent(email.body)}`;
+  const priceLine = P.variant === 'come' ? `One seat at the F&amp;F rate: <b>${money(pr.ff)}</b>` : P.variant === 'ff' && P.type !== 'post' ? `<b>${money(pr.ff)}</b> each <span class="muted">(friend price ${money(pr.friend)} − ${P.pct}%)</span>` : `<b>${money(pr.friend)}</b> each <span class="muted">· TM list ${money(pr.tm)}</span>`;
+  return `<div class="scrim" data-act="pclose"></div>
+  <div class="modal" role="dialog" aria-modal="true" aria-label="Pitch ${esc(g.opp)}">
+    <div class="m-head"><div class="vs">${logo(g, 44)}<div><span class="eyebrow">${fmtDate(g, { weekday: 'long', month: 'long', day: 'numeric' })} · ${esc(g.time)}</span><h2>${esc(g.opp)}</h2></div></div>
+      <button class="icon-btn" data-act="pclose" aria-label="Close">✕</button></div>
+    <div class="m-body">
+      <div class="m-grid">
+        <label class="field"><span>Price step</span><select data-pf="step">${pr.L.steps.map((st, i) => `<option value="${i}" ${i === pr.i ? 'selected' : ''}>${st.label}${i === pr.L.current ? ' (today)' : ''} — ${money(friendPrice(st.value, state.settings))}</option>`).join('')}</select></label>
+        <label class="field"><span>F&amp;F discount</span><span class="pct-in"><input data-pf="pct" type="number" inputmode="numeric" min="0" max="90" value="${P.pct}"><span>%</span></span></label>
+        <label class="field wide"><span>Hook</span><input data-pf="hook" value="${esc(hookFor(g))}" placeholder="One line on why this game is fun"></label>
+      </div>
+      <div class="m-row"><span class="label">Offer</span><div class="seg">${VARIANTS.map(([k, l]) => `<button class="${P.variant === k ? 'on' : ''}" data-act="pvar:${k}">${l}</button>`).join('')}</div></div>
+      <div class="m-row"><span class="label">Send as</span><div class="seg">${TYPES.map(([k, l]) => `<button class="${P.type === k ? 'on' : ''}" data-act="ptype:${k}">${l}</button>`).join('')}</div></div>
+      <p class="price-line">${priceLine}${P.type === 'post' && P.variant !== 'standard' ? ' <span class="muted small">Board posts are public, so they use the regular price.</span>' : ''}</p>
+      <label class="field"><span>To</span><select data-pf="contact"><option value="">No one yet (generic greeting)</option>${groups.map(gr => `<optgroup label="${esc(gr)}">${contacts.filter(x => (x.group || 'Other') === gr).map(x => `<option value="${esc(x.id)}" ${x.id === P.contactId ? 'selected' : ''}>${esc(x.name)}</option>`).join('')}</optgroup>`).join('')}</select></label>
+      <label class="field"><span>Message ${P.dirty ? '<span class="muted">(edited)</span>' : ''}</span><textarea data-pf="text" rows="${P.type === 'email' ? 11 : 5}">${esc(P.text)}</textarea></label>
+      <div class="list-actions">
+        <button class="btn" data-act="pcopy">Copy</button>
+        ${P.type === 'text' ? `<a class="btn ghost" id="sms-link" href="${esc(smsHref)}">Open in Messages${c?.phone ? '' : ''}</a>` : ''}
+        ${P.type === 'email' ? `<a class="btn ghost" id="mail-link" href="${esc(mailHref)}">Open email</a>` : ''}
+        <button class="btn ghost" data-act="pnext">Next wording</button>
+        ${P.dirty ? '<button class="btn ghost" data-act="preset">Reset text</button>' : ''}
+        <button class="btn ghost" data-act="plog">Log a sale</button>
+      </div>
+      <p class="muted small">Remix with Claude is coming later — for now, ask Claude in chat or edit the text above. You still hit send yourself.</p>
+    </div>
+  </div>`;
+}
+
+function saleModal() {
+  const F = state.saleForm;
+  if (!F) return '';
+  const names = (state.contacts || []).map(c => c.name);
+  const games = state.games.filter(g => !isPast(g) || g.soldPrice != null);
+  return `<div class="scrim" data-act="sclose"></div>
+  <div class="modal small-modal" role="dialog" aria-modal="true" aria-label="Log a sale">
+    <div class="m-head"><h2>Log a sale</h2><button class="icon-btn" data-act="sclose" aria-label="Close">✕</button></div>
+    <div class="m-body">
+      <div class="m-grid">
+        <label class="field wide"><span>Game</span><select data-sf="id">${games.map(g => `<option value="${g.id}" ${g.id === F.id ? 'selected' : ''}>${team(g.opp).abbr} · ${fmtDate(g)}</option>`).join('')}</select></label>
+        <label class="field wide"><span>Buyer</span><input data-sf="buyer" list="buyer-names" value="${esc(F.buyer)}" placeholder="Pick a contact or type a name"><datalist id="buyer-names">${names.map(n => `<option value="${esc(n)}">`).join('')}</datalist></label>
+        <label class="field"><span>Tickets</span><select data-sf="qty">${[2, 1].map(q => `<option ${Number(F.qty) === q ? 'selected' : ''}>${q}</option>`).join('')}</select></label>
+        <label class="field"><span>Price each</span><span class="money-in big"><span class="cur">$</span><input data-sf="price" type="number" inputmode="decimal" value="${F.price ?? ''}"></span></label>
+        <label class="field"><span>Where</span><select data-sf="platform">${PLATFORMS.map(p => `<option ${F.platform === p ? 'selected' : ''}>${p}</option>`).join('')}</select></label>
+        <label class="field"><span>Date</span><input data-sf="soldOn" type="date" value="${esc(F.soldOn)}"></label>
+      </div>
+      <div class="interest">
+        <label class="toggle"><input type="checkbox" data-sf="paid" ${F.paid ? 'checked' : ''}><span>Money received</span></label>
+        <label class="toggle"><input type="checkbox" data-sf="transferred" ${F.transferred ? 'checked' : ''}><span>Tickets transferred</span></label>
+      </div>
+      <p class="muted small">It counts toward the $${Number(state.settings.revenueTarget || 8000).toLocaleString()} once both boxes are checked. Whoever sold it does the transfer.</p>
+      <div class="list-actions"><button class="btn" data-act="ssave">Save sale</button></div>
+    </div>
+  </div>`;
+}
+
+function openSale(g, extra = {}) {
+  const pct = Number(state.settings.ffDiscount) || 20;
+  const p = pitchPrices(g, null, pct);
+  state.saleForm = { id: g.id, buyer: g.buyer || '', qty: g.qtySold || 2, price: g.soldPrice ?? p.friend, platform: g.platform && g.platform !== 'Ticketmaster' ? g.platform : FRIEND, soldOn: g.soldOn || new Date().toLocaleDateString('en-CA'), paid: !!g.paid, transferred: !!g.transferred, ...extra };
+}
+
+// ---- Sales: thermometers + log
+
+function thermos(compact = false) {
+  const S = state.settings, target = Number(S.revenueTarget) || 8000;
+  const done = state.games.filter(saleDone);
+  const revenue = done.reduce((a, g) => a + received(g, S), 0);
+  const full = done.filter(g => (g.qtySold || seatCount()) >= seatCount()).length;
+  const pr = Math.min(1, revenue / target), pg = Math.min(1, full / state.games.length);
+  const tube = (label, val, sub, p, cls) => `<div class="thermo ${cls}"><div class="t-top"><span class="label">${label}</span><span class="t-val">${val}</span></div><div class="t-tube"><div class="t-fill" style="width:${(p * 100).toFixed(1)}%"></div></div><span class="muted small">${sub}</span></div>`;
+  return `<div class="thermos ${compact ? 'compact' : ''}">
+    ${tube('Revenue toward the seats', `${money(revenue)} <small>of ${money(target)}</small>`, `${Math.round(pr * 100)}% · ${money(Math.max(0, target - revenue))} to go`, pr, 'rev')}
+    ${tube('Games sold', `${full} <small>of ${state.games.length}</small>`, 'counts once money is in and tickets are transferred', pg, 'games')}
+  </div>`;
+}
+
+function salesView() {
+  const S = state.settings;
+  const sales = state.games.filter(g => g.soldPrice != null).sort((a, b) => a.dateObj - b.dateObj);
+  return `
+  <div class="view-head"><h1>Sales</h1><button class="btn" data-act="saleadd">Log a sale</button></div>
+  ${thermos()}
+  <section class="card">
+    <h2>Sales log</h2>
+    ${sales.length ? `<div class="sheet-wrap flat"><table class="sheet">
+      <thead><tr><th class="sticky">Game</th><th>Buyer</th><th class="r">Tickets</th><th class="r">Each</th><th>Where</th><th class="r">We get</th><th>Money in</th><th>Transferred</th><th></th></tr></thead>
+      <tbody>${sales.map(g => `<tr class="${saleDone(g) ? '' : 'pending-row'}">
+        <td class="sticky">${gameCell(g)}</td><td>${esc(g.buyer || '—')}</td><td class="r">${g.qtySold || seatCount()}</td><td class="r">${money(g.soldPrice)}</td><td>${esc(g.platform || '—')}</td>
+        <td class="r"><b>${money(received(g, S))}</b></td>
+        <td><input type="checkbox" data-gid="${g.id}" data-flag="paid" ${g.paid ? 'checked' : ''} aria-label="Money received"></td>
+        <td><input type="checkbox" data-gid="${g.id}" data-flag="transferred" ${g.transferred ? 'checked' : ''} aria-label="Tickets transferred"></td>
+        <td class="r"><button class="link small" data-act="saleedit:${g.id}">Edit</button></td></tr>`).join('')}</tbody></table></div>` : '<p class="muted">No sales yet. Log one from a pitch, or with the button above.</p>'}
+  </section>`;
+}
+
+// ---- Contacts
+
+function contactsView() {
+  const list = state.contacts || [];
+  const groups = [...new Set(list.map(c => c.group).filter(Boolean))];
+  const counts = groups.map(gr => [gr, list.filter(c => c.group === gr).length]);
+  return `
+  <div class="view-head"><h1>Contacts</h1><span class="muted small">${esc(state.user.name)}'s list · only you see it in the app</span></div>
+  <div class="group-chips">${counts.map(([gr, n]) => `<span class="gchip"><b>${n}</b> ${esc(gr)}</span>`).join('')}<span class="gchip total"><b>${list.length}</b> people</span></div>
+  <section class="card">
+    <h2>Add someone</h2>
+    <div class="add-row">
+      <input id="c-name" placeholder="Name" aria-label="Name"><input id="c-phone" placeholder="Phone" inputmode="tel" aria-label="Phone"><input id="c-email" placeholder="Email" inputmode="email" aria-label="Email">
+      <input id="c-group" placeholder="Group" list="c-groups" aria-label="Group"><datalist id="c-groups">${groups.map(g => `<option value="${esc(g)}">`).join('')}</datalist>
+      <button class="btn" data-act="cadd">Add</button>
+    </div>
+  </section>
+  <section class="card">
+    <h2>Import a bunch</h2>
+    <div class="grid-2">
+      <div>
+        <h3>Paste a list</h3>
+        <p class="muted small">One person per line: name, phone, email, group. Commas or tabs both work (you can paste straight from a spreadsheet). Missing pieces are fine.</p>
+        <textarea id="c-paste" rows="5" placeholder="Maggie Rowan, (215) 555-0142, maggie@example.com, Family&#10;Kevin Liu, 215-555-0133, , Friends"></textarea>
+        <div class="list-actions"><button class="btn small" data-act="cpaste">Add these</button></div>
+      </div>
+      <div>
+        <h3>Upload from your phone</h3>
+        <p class="muted small">A vCard (.vcf) or CSV file. iPhone: in Contacts, open a list, press and hold it, then Export. Or on icloud.com/contacts, select people, then Export vCard. Google Contacts: Export → vCard or Google CSV. You can set groups after.</p>
+        <label class="field"><span>Group for this file (optional)</span><input id="c-file-group" list="c-groups" placeholder="e.g. Family"></label>
+        <input type="file" id="c-file" accept=".vcf,.csv,.txt,text/vcard,text/csv" data-act-file="contacts">
+      </div>
+    </div>
+  </section>
+  <section class="card">
+    <h2>Everyone</h2>
+    ${list.length ? `<div class="sheet-wrap flat"><table class="sheet contacts-sheet"><thead><tr><th class="sticky">Name</th><th>Phone</th><th>Email</th><th>Group</th><th>Notes</th><th></th></tr></thead><tbody>
+      ${[...list].sort((a, b) => (a.group || '').localeCompare(b.group || '') || a.name.localeCompare(b.name)).map(c => `<tr>
+        <td class="sticky"><input class="cell-in name-in" data-cid="${esc(c.id)}" data-ck="name" value="${esc(c.name)}" aria-label="Name"></td>
+        <td><input class="cell-in txt" data-cid="${esc(c.id)}" data-ck="phone" value="${esc(c.phone)}" aria-label="Phone"></td>
+        <td><input class="cell-in txt wide-in" data-cid="${esc(c.id)}" data-ck="email" value="${esc(c.email)}" aria-label="Email"></td>
+        <td><input class="cell-in txt" list="c-groups" data-cid="${esc(c.id)}" data-ck="group" value="${esc(c.group)}" aria-label="Group"></td>
+        <td><input class="cell-in txt wide-in" data-cid="${esc(c.id)}" data-ck="notes" value="${esc(c.notes)}" placeholder="—" aria-label="Notes"></td>
+        <td class="r"><button class="link danger small" data-act="cdel:${esc(c.id)}">Remove</button></td></tr>`).join('')}
+    </tbody></table></div>` : '<p class="muted">No one yet. Add people above.</p>'}
+  </section>`;
+}
+
+// Parsing for pasted lists, CSV and vCard files.
+function parseLines(text, defGroup = '') {
+  const out = [];
+  for (const raw of String(text).split(/\r?\n/)) {
+    const line = raw.trim();
+    if (!line) continue;
+    const parts = (line.includes('\t') ? line.split('\t') : line.split(',')).map(s => s.trim());
+    const c = { name: '', phone: '', email: '', group: defGroup, notes: '' };
+    for (const p of parts) {
+      if (!p) continue;
+      if (/@/.test(p) && !c.email) c.email = p;
+      else if (/^[+()\d][\d\s().+-]{6,}$/.test(p) && !c.phone) c.phone = p;
+      else if (!c.name) c.name = p;
+      else if (!c.group || c.group === defGroup) c.group = p;
+    }
+    if (c.name || c.phone || c.email) out.push(c);
+  }
+  return out;
+}
+function parseCSV(text, defGroup) {
+  const rows = String(text).split(/\r?\n/).filter(Boolean).map(l => l.match(/("([^"]|"")*"|[^,]*)(,|$)/g).map(x => x.replace(/,$/, '').replace(/^"|"$/g, '').replace(/""/g, '"').trim()));
+  if (!rows.length) return [];
+  const h = rows[0].map(x => x.toLowerCase());
+  const find = (...keys) => h.findIndex(x => keys.some(k => x.includes(k)));
+  const iName = find('display name', 'full name', 'name'), iFirst = find('first name', 'given'), iLast = find('last name', 'family name', 'surname');
+  const iPhone = find('phone', 'mobile', 'cell'), iEmail = find('e-mail', 'email'), iGroup = find('group', 'label');
+  if (iPhone < 0 && iEmail < 0) return parseLines(text, defGroup);
+  return rows.slice(1).map(r => ({
+    name: (iFirst >= 0 || iLast >= 0) ? [r[iFirst], r[iLast]].filter(Boolean).join(' ') || r[iName] || '' : r[iName] || '',
+    phone: r[iPhone] || '', email: r[iEmail] || '', group: defGroup || (iGroup >= 0 ? (r[iGroup] || '').replace(/\s*:::.*$/, '').replace(/\* myContacts/, '').trim() : ''), notes: '',
+  })).filter(c => c.name || c.phone || c.email);
+}
+function parseVCF(text, defGroup) {
+  return String(text).split(/END:VCARD/i).map(card => {
+    const get = re => (card.match(re) || [])[1]?.trim() || '';
+    let name = get(/\nFN[^:]*:(.+)/i);
+    if (!name) { const n = get(/\nN[^:]*:(.+)/i).split(';'); name = [n[1], n[0]].filter(Boolean).join(' '); }
+    return { name, phone: get(/\nTEL[^:]*:(.+)/i), email: get(/\nEMAIL[^:]*:(.+)/i), group: defGroup, notes: '' };
+  }).filter(c => c.name || c.phone);
+}
+function addContacts(list) {
+  const cur = state.contacts || [];
+  const key = c => (c.name.toLowerCase() + '|' + c.phone.replace(/\D/g, '').slice(-7));
+  const seen = new Set(cur.map(key));
+  let added = 0;
+  for (const c of list) {
+    if (seen.has(key(c))) continue;
+    seen.add(key(c));
+    cur.push({ id: 'c' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), ...c });
+    added++;
+  }
+  state.contacts = cur;
+  saveContacts();
+  toast(`${added} added${list.length - added ? `, ${list.length - added} already there` : ''}`);
+  render();
+}
+let contactsTimer;
+function saveContacts() {
+  clearTimeout(contactsTimer);
+  contactsTimer = setTimeout(async () => {
+    try { await store.saveContacts(state.user.name, state.contacts); }
+    catch (e) { toast(e instanceof AuthError ? 'Session expired — sign in again to save contacts' : 'Could not save contacts: ' + e.message); }
+  }, 500);
 }
 
 // ---- Home
@@ -831,13 +1108,17 @@ function settingsView() {
   </section>
   <section class="card">
     <h2>Member limits</h2>
-    <div class="form-grid">${f('resaleCap', 'Resale games allowed', 'number', '7 for full season in 2026-27 (reported)')}${f('exchangeCap', 'Exchanges allowed', 'number')}${f('exchangesUsed', 'Exchanges used', 'number')}</div>
+    <div class="form-grid">${f('resaleCap', 'Ticketmaster resales allowed', 'number', 'Assuming 10 (contract) until confirmed; reports said 7')}${f('exchangeCap', 'Exchanges allowed', 'number')}${f('exchangesUsed', 'Exchanges used', 'number')}</div>
     <p class="small"><a href="https://www.nba.com/sixers/mysixerstickets" target="_blank" rel="noopener">Sixers Account Manager ↗</a> · <a href="https://www.nba.com/sixers/tickets/exchange" target="_blank" rel="noopener">Ticket exchange rules ↗</a></p>
+  </section>
+  <section class="card">
+    <h2>Selling</h2>
+    <div class="form-grid">${f('revenueTarget', 'Revenue target ($)', 'number', 'What both seats cost for the season')}${f('ffDiscount', 'Friends & family discount (%)', 'number', 'Off the friend price, rounded down to $5')}${f('tmBuyerFee', "Ticketmaster buyer fee (%)", 'number', 'Friend price = TM list price + this')}</div>
   </section>
   <section class="card">
     <h2>Selling tranches</h2>
     <p class="muted small">We sell the season in batches. Each tranche gets a decision date — who's going, what to sell — a few weeks before its first game, so every game we sell gets its full Stretch window.</p>
-    <div class="form-grid">${f('trancheStarts', 'Tranche start dates', 'text', 'Comma-separated, e.g. 2026-10-01,2027-01-01,2027-02-15')}${f('trancheDecideWeeks', 'Decide this many weeks before', 'number')}</div>
+    <div class="form-grid">${f('trancheStarts', 'Tranche start dates', 'text', 'Comma-separated, e.g. 2026-10-01,2027-01-01,2027-02-15')}${f('trancheDeadlines', 'Fixed decide-by dates', 'text', 'Same order; blank = automatic. e.g. 2026-11-01,,')}${f('trancheDecideWeeks', 'Otherwise decide this many weeks before', 'number')}</div>
     <p class="small">${tranches(s, state.games).map(t => `<b>Tranche ${t.n}</b>: ${t.games.length} games, ${t.first.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} – ${t.last.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}, decide by ${t.decideBy.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}`).join(' · ')}</p>
   </section>
   <section class="card">
@@ -848,6 +1129,10 @@ function settingsView() {
   </section>
   <div class="list-actions"><button class="btn" data-act="savesettings">Save settings</button></div>
   <section class="card">
+    <h2>More views</h2>
+    <p class="small"><a href="#/home">Home dashboard</a> · <a href="#/games">Schedule &amp; calendar</a> · <a href="#/market">Market prices</a> · <a href="#/split">Split ledger</a></p>
+  </section>
+  <section class="card">
     <h2>Account</h2>
     <p>Signed in as <b>${esc(state.user.name)}</b>${state.user.email && !DEMO ? ` (${esc(state.user.email)})` : ''}.</p>
     <p class="small"><a href="https://docs.google.com/spreadsheets/d/${CONFIG.SHEET_ID}/edit" target="_blank" rel="noopener">Open the Google Sheet ↗</a> — the app reads your "${esc(CONFIG.GAMES_TAB)}" tab and keeps listings/sales in "${esc(CONFIG.APP_TAB)}".</p>
@@ -856,6 +1141,14 @@ function settingsView() {
 }
 
 // ---- Game drawer
+
+function renderModal() {
+  const root = $('#modal-root');
+  if (!root) return;
+  const html = pitchModal() || saleModal();
+  root.innerHTML = html;
+  document.body.classList.toggle('drawer-open', !!html || !!state.open);
+}
 
 function renderDrawer() {
   const root = $('#drawer-root');
@@ -1045,6 +1338,31 @@ async function action(act, arg) {
     case 'mode': state.gamesMode = arg; return render();
     case 'msort': state.marketSort = arg; return render();
     case 'strat': state.stratTab = arg; return render();
+    case 'sellf': state.sellFilter = arg; return render();
+    case 'pitch': state.pitch = { id: arg, step: null, variant: 'standard', type: 'text', pct: Number(state.settings.ffDiscount) || 20, contactId: '', n: 0, text: '', dirty: false }; return renderModal();
+    case 'pclose': state.pitch = null; return renderModal();
+    case 'pvar': Object.assign(state.pitch, { variant: arg, dirty: false }); return renderModal();
+    case 'ptype': Object.assign(state.pitch, { type: arg, dirty: false }); return renderModal();
+    case 'pnext': Object.assign(state.pitch, { n: state.pitch.n + 1, dirty: false }); return renderModal();
+    case 'preset': state.pitch.dirty = false; return renderModal();
+    case 'pcopy': try { await navigator.clipboard.writeText(state.pitch.text); toast('Copied — paste it into your message'); } catch { const t = document.querySelector('[data-pf="text"]'); t?.select(); toast('Select-all done — press Copy'); } return;
+    case 'plog': {
+      const P = state.pitch, pg = state.games.find(x => x.id === P.id), pr = pitchPrices(pg, P.step, P.pct), c = (state.contacts || []).find(x => x.id === P.contactId);
+      state.pitch = null;
+      openSale(pg, { buyer: c?.name || '', qty: P.variant === 'come' ? 1 : 2, price: P.variant === 'standard' ? pr.friend : pr.ff });
+      return renderModal();
+    }
+    case 'saleadd': { const first = state.games.find(x => !isPast(x) && x.plan === 'sell' && x.soldPrice == null) || state.games.find(x => !isPast(x)); openSale(first); return renderModal(); }
+    case 'saleedit': openSale(state.games.find(x => x.id === arg)); return renderModal();
+    case 'sclose': state.saleForm = null; return renderModal();
+    case 'ssave': return saveSale();
+    case 'cadd': {
+      const v = id => document.getElementById(id)?.value.trim() || '';
+      if (!v('c-name') && !v('c-phone')) return toast('Add at least a name or a phone number');
+      return addContacts([{ name: v('c-name'), phone: v('c-phone'), email: v('c-email'), group: v('c-group'), notes: '' }]);
+    }
+    case 'cpaste': return addContacts(parseLines(document.getElementById('c-paste')?.value || ''));
+    case 'cdel': state.contacts = state.contacts.filter(c => c.id !== arg); saveContacts(); return render();
     case 'savesettings': return saveSettings();
     case 'demoreset': store.reset(); return loadAll();
     case 'demoswap': state.user = { ...state.user, name: state.user.name === P1 ? P2 : P1 }; toast(`Viewing as ${state.user.name}`); return render();
@@ -1084,6 +1402,15 @@ async function action(act, arg) {
 function onChange(e) {
   const el = e.target;
   if (el.dataset.actCheck === 'showpast') { state.showPast = el.checked; return render(); }
+  if (el.dataset.pf && state.pitch) return onPitchChange(el);
+  if (el.dataset.sf && state.saleForm) { state.saleForm[el.dataset.sf] = el.type === 'checkbox' ? el.checked : el.value; if (el.dataset.sf === 'id') { const sg = state.games.find(x => x.id === el.value); openSale(sg, { buyer: state.saleForm.buyer }); renderModal(); } return; }
+  if (el.dataset.flag) { const fg = state.games.find(x => x.id === el.dataset.gid); if (fg) { fg[el.dataset.flag] = el.checked; persist(fg); render(); } return; }
+  if (el.dataset.cid) { const c = state.contacts.find(x => x.id === el.dataset.cid); if (c) { c[el.dataset.ck] = el.value.trim(); saveContacts(); } return; }
+  if (el.dataset.actFile === 'contacts' && el.files?.[0]) {
+    const f = el.files[0], grp = document.getElementById('c-file-group')?.value.trim() || '';
+    f.text().then(t => addContacts(/BEGIN:VCARD/i.test(t) ? parseVCF(t, grp) : /\.csv$/i.test(f.name) || /,/.test(t.split('\n')[0]) ? parseCSV(t, grp) : parseLines(t, grp)));
+    return;
+  }
   if (el.dataset.gid) return onCellChange(el);
   if (el.dataset.set) {
     state.settings[el.dataset.set] = el.value;
@@ -1124,8 +1451,46 @@ function onCellChange(el) {
   renderKeepFocus();
 }
 
+function onPitchChange(el) {
+  const P = state.pitch, g = state.games.find(x => x.id === P.id);
+  const k = el.dataset.pf;
+  if (k === 'step') { P.step = Number(el.value); P.dirty = false; }
+  else if (k === 'pct') { P.pct = Math.max(0, Math.min(90, Number(el.value) || 0)); P.dirty = false; }
+  else if (k === 'hook') { g.hook = el.value.trim(); persist(g); P.dirty = false; }
+  else if (k === 'contact') {
+    P.contactId = el.value;
+    const c = state.contacts.find(x => x.id === P.contactId);
+    // Keep hand edits: swap just the greeting's name.
+    if (P.dirty) P.text = P.text.replace(/^((?:Subject:[^\n]*\n+)?)Hey(?: [^,!—\n]+)?/, `$1Hey${firstName(c?.name) ? ' ' + firstName(c.name) : ''}`);
+  } else if (k === 'text') return;
+  renderModal();
+}
+
+async function saveSale() {
+  const F = state.saleForm, g = state.games.find(x => x.id === F.id);
+  if (!g) return;
+  const price = Number(F.price), qty = Number(F.qty) || 2;
+  if (!price) return toast('Add the price each');
+  Object.assign(g, { soldPrice: price, qtySold: qty, buyer: F.buyer.trim(), platform: F.platform, soldOn: F.soldOn, paid: !!F.paid, transferred: !!F.transferred, payout: null });
+  if (qty < seatCount() && g.plan === 'use') g.seats = [state.user.name, F.buyer.trim() || 'Buyer'];
+  else if (qty >= seatCount()) g.plan = 'sell';
+  state.saleForm = null;
+  persist(g);
+  render();
+  toast(saleDone(g) ? 'Sale logged — counted toward the $8k' : 'Sale logged — it counts once money is in and tickets are transferred');
+}
+
 function onInput(e) {
   const el = e.target;
+  if (el.dataset.pf === 'text' && state.pitch) {
+    const P = state.pitch;
+    P.text = el.value; P.dirty = true;
+    const sms = document.getElementById('sms-link'), mail = document.getElementById('mail-link');
+    const c = (state.contacts || []).find(x => x.id === P.contactId);
+    if (sms) sms.href = `sms:${(c?.phone || '').replace(/[^\d+]/g, '')}?&body=${encodeURIComponent(P.text)}`;
+    if (mail) { const m = splitEmail(P.text); mail.href = `mailto:${encodeURIComponent(c?.email || '')}?subject=${encodeURIComponent(m.subject)}&body=${encodeURIComponent(m.body)}`; }
+    return;
+  }
   if (el.dataset.f === 'note') {
     const g = currentGame();
     if (g) { g.note = el.value; persistSoon(g, 1200); }

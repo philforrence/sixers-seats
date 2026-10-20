@@ -2,18 +2,24 @@
 // Both expose: load() -> { games, settings }, saveGame(game), saveSettings(settings), addGame(row).
 import { CONFIG } from './config.js';
 import { DEFAULT_SETTINGS, makeGame, doingText, holders } from './model.js';
-import { DEMO_ROWS } from './demo-data.js';
+import { DEMO_ROWS, DEMO_CONTACTS } from './demo-data.js';
 import * as auth from './auth.js';
 
 export class AuthError extends Error {}
 
+// Contacts: one tab per person ("Contacts - Phil"), shown only to its owner in the app.
+const CONTACT_COLS = ['name', 'phone', 'email', 'group', 'notes'];
+const CONTACT_HEADERS = ['Name', 'Phone', 'Email', 'Group', 'Notes'];
+const contactsTab = owner => `Contacts - ${owner}`;
+const rowToContact = (r, i) => ({ id: 'c' + i + '-' + (r[0] || ''), ...Object.fromEntries(CONTACT_COLS.map((k, j) => [k, r[j] ?? ''])) });
+
 // Columns of the app-owned tab, in order.
 const APP_COLS = ['date', 'opponent', 'plan', 'seat1', 'seat2', 'seat3', 'seat4', 'platform', 'listPrice', 'listedOn',
   'soldPrice', 'qtySold', 'fees', 'payout', 'buyer', 'soldOn', 'transferred', 'paid', 'updatedBy', 'updatedAt',
-  'comp', 'compAt', 'pStretch', 'p2wk', 'p5d', 'p48h'];
+  'comp', 'compAt', 'pStretch', 'p2wk', 'p5d', 'p48h', 'hook'];
 const APP_HEADERS = ['Date', 'Opponent', 'Plan', 'Seat 1', 'Seat 2', 'Seat 3', 'Seat 4', 'Platform', 'List Price (ea)', 'Listed On',
   'Sold Price (ea)', 'Qty Sold', 'Fees', 'Payout', 'Buyer', 'Sold On', 'Transferred', 'Paid Out', 'Updated By', 'Updated At',
-  'Comparable (all-in)', 'Comparable Checked', 'Stretch Price', '2-Week Price', '5-Day Price', '48-Hour Price'];
+  'Comparable (all-in)', 'Comparable Checked', 'Stretch Price', '14-Day Price', '5-Day Price', '2-Day Price', 'Pitch Hook'];
 
 // Header names in the existing "Home Games" tab we read (and the ones we write back).
 const H = {
@@ -38,6 +44,7 @@ function appValues(g, who) {
     updatedBy: who, updatedAt: nowStamp(),
     comp: g.comp ?? '', compAt: g.compAt || '',
     pStretch: g.pStretch ?? '', p2wk: g.p2wk ?? '', p5d: g.p5d ?? '', p48h: g.p48h ?? '',
+    hook: g.hook || '',
   };
 }
 
@@ -155,6 +162,26 @@ export class SheetStore {
     await this.api(`/values/${encodeURIComponent(`${q(CONFIG.SETTINGS_TAB)}!A1:B${rows.length}`)}?valueInputOption=RAW`, { method: 'PUT', body: { values: rows } });
   }
 
+  async loadContacts(owner) {
+    const tab = contactsTab(owner);
+    const meta = await this.api('?fields=sheets.properties(title)');
+    if (!meta.sheets.some(x => x.properties.title === tab)) {
+      await this.api(':batchUpdate', { method: 'POST', body: { requests: [{ addSheet: { properties: { title: tab, gridProperties: { frozenRowCount: 1 } } } }] } });
+      await this.api(`/values/${encodeURIComponent(`${q(tab)}!A1`)}?valueInputOption=RAW`, { method: 'PUT', body: { values: [CONTACT_HEADERS] } });
+      return [];
+    }
+    const res = await this.api(`/values/${encodeURIComponent(`${q(tab)}!A2:E2000`)}`);
+    return (res.values || []).filter(r => r[0]).map(rowToContact);
+  }
+
+  // Rewrites the whole tab: contact lists are small and only their owner edits them.
+  async saveContacts(owner, list) {
+    const tab = contactsTab(owner);
+    const rows = [CONTACT_HEADERS, ...list.map(c => CONTACT_COLS.map(k => c[k] || ''))];
+    await this.api(`/values/${encodeURIComponent(`${q(tab)}!A1:E${rows.length}`)}?valueInputOption=RAW`, { method: 'PUT', body: { values: rows } });
+    await this.api(`/values/${encodeURIComponent(`${q(tab)}!A${rows.length + 1}:E2000`)}:clear`, { method: 'POST', body: {} });
+  }
+
   // New games (e.g. the NBA Cup game added in December) go in the app tab only,
   // so we never disturb the formatting/totals of the Home Games tab.
   async addGame(row, who) {
@@ -200,5 +227,11 @@ export class DemoStore {
     await this.saveGame(g, who);
     return g;
   }
+  async loadContacts(owner) {
+    const saved = this.state.saved.contacts?.[owner];
+    if (saved) return saved;
+    return owner === CONFIG.PARTNERS[0] ? DEMO_CONTACTS.map((r, i) => rowToContact([...r, ''], i)) : [];
+  }
+  async saveContacts(owner, list) { (this.state.saved.contacts ||= {})[owner] = list; this.persist(); }
   reset() { try { localStorage.removeItem(DEMO_KEY); } catch {} }
 }

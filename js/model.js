@@ -14,12 +14,15 @@ export const DEFAULT_SETTINGS = {
   feeVivid: 10,
   feeTickPick: 15,
   defaultPlatform: 'StubHub',
-  resaleCap: 7,           // 2026-27 full-season resale allowance (Inquirer, Sep 2026); 10 last season
+  resaleCap: 10,          // Ticketmaster resales allowed; contract said 10, reports said 7 — unconfirmed
   exchangeCap: 10,
   exchangesUsed: 0,
   tmBuyerFee: 20,         // approx. % Ticketmaster adds on top of your list price for buyers
   trancheStarts: '2026-10-01,2027-01-01,2027-02-15',   // first day of each selling tranche
   trancheDecideWeeks: 4,  // decide on a tranche this many weeks before its first game
+  trancheDeadlines: '2026-11-01,,',   // optional fixed decide-by date per tranche (blank = automatic)
+  ffDiscount: 20,         // friends & family discount, % off the friend price
+  revenueTarget: 8000,    // what both seats cost for the season
   settingsVersion: 0,
 };
 
@@ -110,7 +113,7 @@ export function makeGame(row, app) {
     seats: parsed.seats,
     platform: '', listPrice: null, listedOn: '', soldPrice: null, qtySold: null, fees: null,
     payout: null, buyer: '', soldOn: '', transferred: false, paid: false, updatedBy: '', updatedAt: '', appRow: null,
-    comp: null, compAt: '', compUrl: '', compNote: '', compN: null, pStretch: null, p2wk: null, p5d: null, p48h: null,
+    comp: null, compAt: '', compUrl: '', compNote: '', compN: null, pStretch: null, p2wk: null, p5d: null, p48h: null, hook: '',
   };
   if (app) {
     Object.assign(g, {
@@ -136,6 +139,7 @@ export function makeGame(row, app) {
       p2wk: num(app.p2wk),
       p5d: num(app.p5d),
       p48h: num(app.p48h),
+      hook: app.hook || '',
     });
   }
   return g;
@@ -286,10 +290,10 @@ export const money = (n, dp = 0) => n == null || !Number.isFinite(n) ? '—' : (
 // you type into Ticketmaster (before their buyer fees). Any step can be overridden per game.
 
 export const STEPS = [
-  { key: 'pStretch', label: 'Stretch', short: '2 wk+', fromHours: Infinity, factor: 1.15 },
-  { key: 'p2wk', label: '2 weeks', short: '2 wk', fromHours: 14 * 24, factor: 1 },
-  { key: 'p5d', label: '5 days', short: '5 day', fromHours: 5 * 24, factor: 0.85 },
-  { key: 'p48h', label: '48 hours', short: '48 hr', fromHours: 48, factor: 0.7 },
+  { key: 'pStretch', label: 'Stretch', short: '14d+', window: 'more than 14 days out', fromHours: Infinity, factor: 1.15 },
+  { key: 'p2wk', label: '14 days', short: '14d', window: '14 to 5 days out', fromHours: 14 * 24, factor: 1 },
+  { key: 'p5d', label: '5 days', short: '5d', window: '5 to 2 days out', fromHours: 5 * 24, factor: 0.85 },
+  { key: 'p48h', label: '2 days', short: '2d', window: 'last 2 days', fromHours: 48, factor: 0.7 },
 ];
 
 const round5 = n => Math.round(n / 5) * 5;
@@ -351,6 +355,7 @@ export function tranches(settings, games) {
   const starts = String(settings.trancheStarts || DEFAULT_SETTINGS.trancheStarts).split(',')
     .map(s => s.trim()).filter(Boolean).map(s => new Date(s + 'T00:00:00')).filter(d => !isNaN(d)).sort((a, b) => a - b);
   const weeks = Number(settings.trancheDecideWeeks) || 4;
+  const fixed = String(settings.trancheDeadlines ?? DEFAULT_SETTINGS.trancheDeadlines).split(',').map(s => s.trim());
   const list = starts.map((start, i) => ({ n: i + 1, start, end: starts[i + 1] || null, games: [] }));
   for (const g of games) {
     const t = [...list].reverse().find(t => g.dateObj >= t.start) || list[0];
@@ -361,9 +366,47 @@ export function tranches(settings, games) {
     const first = t.games[0], last = t.games[t.games.length - 1];
     t.first = first?.dateObj || t.start;
     t.last = last?.dateObj || t.start;
-    t.decideBy = new Date(t.first.getTime() - weeks * 7 * 86400e3);
+    const set = fixed[t.n - 1] && new Date(fixed[t.n - 1] + 'T23:59:00');
+    t.decideBy = set && !isNaN(set) ? set : new Date(t.first.getTime() - weeks * 7 * 86400e3);
     t.decideBy.setHours(23, 59, 0, 0);
   }
   return list.filter(t => t.games.length);
 }
 export const trancheOf = (list, g) => list.find(t => t.games.includes(g)) || null;
+
+// --- Friend prices --------------------------------------------------------------
+// Friends pay what similar seats cost online with fees included, so a friend price is the
+// Ticketmaster list price plus Ticketmaster's buyer fee. Overrides on the ladder carry through.
+export const round5down = n => Math.floor(n / 5) * 5;
+export function friendPrice(tmPrice, settings) {
+  if (tmPrice == null) return null;
+  return Math.round(tmPrice * (1 + (Number(settings.tmBuyerFee) || 0) / 100) / 5) * 5;
+}
+export function ffPrice(price, pct) {
+  if (price == null) return null;
+  return round5down(price * (1 - (Number(pct) || 0) / 100));
+}
+export function friendLadder(L, settings) {
+  return L.steps.map(st => ({ ...st, friend: friendPrice(st.value, settings) }));
+}
+
+// Days-to-game window, for color-coding rows (14 / 5 / 2 days out).
+export function windowOf(g, now = new Date()) {
+  const h = hoursUntil(g, now);
+  if (h < -3) return 'past';
+  if (h <= 48) return 'w2';
+  if (h <= 5 * 24) return 'w5';
+  if (h <= 14 * 24) return 'w14';
+  return 'far';
+}
+export const WINDOW_LABEL = { far: 'More than 14 days', w14: '14–5 days', w5: '5–2 days', w2: 'Last 2 days', past: 'Played' };
+
+// --- Sales ------------------------------------------------------------------------
+// A sale counts once the money is in and the tickets are transferred.
+export const saleDone = g => g.soldPrice != null && g.paid && g.transferred;
+export function received(g, settings) {
+  if (g.soldPrice == null) return 0;
+  if (g.payout != null) return g.payout;
+  const qty = g.qtySold || Number(settings.seatCount) || 2;
+  return netPayout(g.soldPrice, qty, feePct(settings, g.platform));
+}
