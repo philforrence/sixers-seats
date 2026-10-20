@@ -382,3 +382,60 @@ button.stat:hover { border-color: var(--accent); }
   .game-cell b { min-width: 30px; font-size: 14px; }
   .sheet td, .sheet th { padding-left: 5px; padding-right: 5px; }
 }
+
+.price-tbl tr.now-row td { background: color-mix(in srgb, var(--accent) 12%, transparent); font-weight: 600; }
+.price-tbl tr.done-row td { color: var(--muted); text-decoration: line-through; }
+
+/* ---------- Money cells, comps, tranches */
+:root { --t1: #2E7FD0; --t2: #8B5CF6; --t3: #0F9F8F; --mk-deadline: #D97706; --mk-today: #ED174C; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --t1: #4AA3F0; --t2: #A78BFA; --t3: #2DD4BF; --mk-deadline: #F5B841; --mk-today: #FF5C75; } }
+:root[data-theme="dark"] { --t1: #4AA3F0; --t2: #A78BFA; --t3: #2DD4BF; --mk-deadline: #F5B841; --mk-today: #FF5C75; }
+.money-in { display: inline-flex; align-items: center; justify-content: flex-end; gap: 1px; }
+.money-in .cur { color: var(--muted); font-size: 12px; font-weight: 600; }
+.money-in.set .cur { color: var(--text); }
+.money-in .cell-in { width: 3.4em; padding-left: 1px; padding-right: 2px; text-align: left; }
+.money-in.set .cell-in { font-weight: 700; color: var(--text); }
+.sheet td.step.done .money-in { opacity: .45; text-decoration: line-through; }
+.sheet td.step.done .money-in .cell-in { opacity: 1; text-decoration: inherit; }
+.comp-link { font-weight: 700; color: var(--accent); text-decoration: none; white-space: nowrap; }
+.comp-link span { font-size: 11px; margin-left: 2px; opacity: .8; }
+a.comp-link:hover { text-decoration: underline; }
+.comp-find { font-size: 12px; color: var(--muted); text-decoration: none; border: 1px dashed var(--line); padding: 1px 6px; border-radius: 6px; white-space: nowrap; }
+.comp-find:hover { color: var(--accent); border-color: var(--accent); }
+.thin { margin-left: 4px; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--warn-ink); background: var(--warn-bg); padding: 1px 5px; border-radius: 5px; }
+.act.friend { background: color-mix(in srgb, var(--c-going) 16%, transparent); color: var(--c-going); }
+.cell-select.a-friend { color: var(--c-going); }
+.sheet tr.past-row td { opacity: .55; }
+
+/* tranche stripe on the pinned game cell */
+.sheet tr.t1 td.sticky { box-shadow: inset 4px 0 0 var(--t1), 1px 0 0 var(--line); }
+.sheet tr.t2 td.sticky { box-shadow: inset 4px 0 0 var(--t2), 1px 0 0 var(--line); }
+.sheet tr.t3 td.sticky { box-shadow: inset 4px 0 0 var(--t3), 1px 0 0 var(--line); }
+.sheet tr.hot td.sticky { box-shadow: inset 4px 0 0 var(--c-selling), 1px 0 0 var(--line); }
+
+/* marker rows: a thick line across the sheet with a flag pinned at the left end */
+.sheet tr.mk td { padding: 0; height: 16px; border-bottom: 0; background: transparent !important; }
+.sheet tr.mk:hover td { background: transparent; }
+.mk-line { position: relative; height: 16px; }
+.mk-line::before { content: ""; position: absolute; left: 0; right: 0; top: 6px; height: 4px; background: var(--mk); border-radius: 2px; }
+.mk-flag { position: sticky; left: 0; z-index: 2; display: inline-flex; align-items: center; height: 20px; margin-top: -2px; padding: 0 10px 0 8px; background: var(--mk); color: #fff; font-size: 11px; font-weight: 700; letter-spacing: .02em; white-space: nowrap; border-radius: 0 10px 10px 0; box-shadow: 0 1px 3px rgba(0,0,0,.25); }
+.sheet tr.mk.band { --mk: var(--t1); }
+.sheet tr.mk.band.t2 { --mk: var(--t2); }
+.sheet tr.mk.band.t3 { --mk: var(--t3); }
+.sheet tr.mk.band td { height: 26px; }
+.sheet tr.mk.band .mk-line { height: 26px; }
+.sheet tr.mk.band .mk-line::before { top: 10px; height: 6px; }
+.sheet tr.mk.band .mk-flag { height: 24px; margin-top: 1px; font-size: 12px; }
+.sheet tr.mk.deadline { --mk: var(--mk-deadline); }
+.sheet tr.mk.deadline .mk-flag { color: #1a1300; }
+.sheet tr.mk.deadline .mk-line::before { background: repeating-linear-gradient(90deg, var(--mk) 0 14px, transparent 14px 20px); }
+.sheet tr.mk.today { --mk: var(--mk-today); }
+
+.t-strip { display: flex; flex-wrap: wrap; gap: 8px; }
+.t-chip { font-size: 12px; padding: 4px 10px 4px 8px; border-radius: 8px; background: var(--surface); border: 1px solid var(--line); border-left: 4px solid var(--t1); color: var(--muted); }
+.t-chip b { color: var(--text); margin-right: 4px; }
+.t-chip.t2 { border-left-color: var(--t2); } .t-chip.t3 { border-left-color: var(--t3); }
+@media (max-width: 760px) { .money-in .cell-in { width: 3.2em; } .mk-flag { font-size: 10px; } }
+.comp-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; margin: 4px 0 12px; padding: 10px 12px; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; }
+.comp-row .label { width: 100%; margin: 0; }
+.comp-row .money-in .cell-in { border-color: var(--line); }

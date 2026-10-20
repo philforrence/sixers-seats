@@ -18,9 +18,12 @@ export const DEFAULT_SETTINGS = {
   exchangeCap: 10,
   exchangesUsed: 0,
   tmBuyerFee: 20,         // approx. % Ticketmaster adds on top of your list price for buyers
+  trancheStarts: '2026-10-01,2027-01-01,2027-02-15',   // first day of each selling tranche
+  trancheDecideWeeks: 4,  // decide on a tranche this many weeks before its first game
   settingsVersion: 0,
 };
 
+export const FRIEND = 'Friend / Venmo';
 export const PLATFORMS = ['Ticketmaster', 'StubHub', 'SeatGeek', 'Vivid', 'TickPick', 'Friend / Venmo', 'Other'];
 
 export const feePct = (settings, platform) => {
@@ -107,7 +110,7 @@ export function makeGame(row, app) {
     seats: parsed.seats,
     platform: '', listPrice: null, listedOn: '', soldPrice: null, qtySold: null, fees: null,
     payout: null, buyer: '', soldOn: '', transferred: false, paid: false, updatedBy: '', updatedAt: '', appRow: null,
-    comp: null, compAt: '', pStretch: null, p2wk: null, p5d: null, p48h: null,
+    comp: null, compAt: '', compUrl: '', compNote: '', compN: null, pStretch: null, p2wk: null, p5d: null, p48h: null,
   };
   if (app) {
     Object.assign(g, {
@@ -211,6 +214,7 @@ export function median(a) {
 // Estimated value of one of your tickets right now.
 export function estimate(g, prices, mult) {
   if (g.soldPrice != null) return { value: g.soldPrice, basis: 'sold' };
+  if (g.comp != null) return { value: g.comp, basis: 'comps' };
   const m = market(prices, g);
   if (m?.low) return { value: Math.round(m.low * mult.value), basis: 'market', low: m.low };
   if (g.baseline) return { value: g.baseline, basis: 'sheet' };
@@ -323,3 +327,43 @@ export function ladder(g, prices, mult, settings, floor, now = new Date()) {
   const nextAt = next ? new Date(startTime(g).getTime() - next.fromHours * 3600e3) : null;
   return { fair, steps, current, now: steps[current], next, nextAt, hours: h };
 }
+
+// --- Comparable listings ------------------------------------------------------
+// data/comps.json holds the cheapest similar pair per game (collected from Vivid Seats).
+// A comp typed into the app wins when it was entered after the file was checked.
+export function applyComps(games, prices) {
+  const file = prices?.comps;
+  for (const g of games) {
+    const m = market(prices, g);
+    g.compSearch = m?.vividUrl ? m.vividUrl + '?quantity=2' : '';
+    const c = file?.games?.[g.id];
+    if (!c) continue;
+    const manualNewer = g.comp != null && Date.parse(g.compAt) > Date.parse(file.checked);
+    if (manualNewer) continue;
+    Object.assign(g, { comp: c.price, compAt: file.checked, compUrl: c.url, compNote: `Sec ${c.sec} · Row ${c.row}`, compN: c.n });
+  }
+}
+
+// --- Selling tranches ------------------------------------------------------------
+// The season is sold in batches. Each tranche has a decision date a few weeks before
+// its first game, so every game we sell still gets its full Stretch window.
+export function tranches(settings, games) {
+  const starts = String(settings.trancheStarts || DEFAULT_SETTINGS.trancheStarts).split(',')
+    .map(s => s.trim()).filter(Boolean).map(s => new Date(s + 'T00:00:00')).filter(d => !isNaN(d)).sort((a, b) => a - b);
+  const weeks = Number(settings.trancheDecideWeeks) || 4;
+  const list = starts.map((start, i) => ({ n: i + 1, start, end: starts[i + 1] || null, games: [] }));
+  for (const g of games) {
+    const t = [...list].reverse().find(t => g.dateObj >= t.start) || list[0];
+    if (t) t.games.push(g);
+  }
+  for (const t of list) {
+    t.games.sort((a, b) => a.dateObj - b.dateObj);
+    const first = t.games[0], last = t.games[t.games.length - 1];
+    t.first = first?.dateObj || t.start;
+    t.last = last?.dateObj || t.start;
+    t.decideBy = new Date(t.first.getTime() - weeks * 7 * 86400e3);
+    t.decideBy.setHours(23, 59, 0, 0);
+  }
+  return list.filter(t => t.games.length);
+}
+export const trancheOf = (list, g) => list.find(t => t.games.includes(g)) || null;

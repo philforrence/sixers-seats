@@ -35,10 +35,14 @@ export function parseEspn(json) {
 }
 
 export async function loadPrices({ demo, baselines } = {}) {
-  const prices = { updated: null, games: {}, live: false };
+  const prices = { updated: null, games: {}, live: false, comps: null };
   try {
     const r = await fetch(CONFIG.PRICES_URL, { cache: 'no-cache' });
     if (r.ok) Object.assign(prices, await r.json());
+  } catch {}
+  try {
+    const r = await fetch(CONFIG.COMPS_URL, { cache: 'no-cache' });
+    if (r.ok) prices.comps = await r.json();
   } catch {}
   try {
     const live = parseEspn(await fetch(ESPN).then(r => r.json()));

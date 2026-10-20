@@ -19,6 +19,8 @@ export const CONFIG = {
 
   // Market prices written by the GitHub Action (scripts/fetch-prices.mjs).
   PRICES_URL: 'data/prices.json',
+  // Comparable listings for our seats, refreshed by hand (Claude collects them from Vivid Seats).
+  COMPS_URL: 'data/comps.json',
 };
 
 export const DEMO = !CONFIG.CLIENT_ID || (typeof location !== 'undefined' && new URLSearchParams(location.search).has('demo'));
