@@ -526,3 +526,27 @@ a.comp-link:hover { text-decoration: underline; }
 .payee.p2 { border-left-color: var(--p2); }
 .payee .val { font-family: var(--display); font-size: 28px; font-weight: 700; }
 .sheet tfoot td { border-top: 2px solid var(--line); font-size: 14px; }
+
+/* ---------- Popovers and the slim Sell table */
+#tip { position: fixed; z-index: 60; left: -9999px; top: 0; max-width: min(300px, calc(100vw - 16px)); padding: 9px 12px; border-radius: 10px; background: var(--surface); color: var(--text); border: 1px solid var(--line); box-shadow: 0 8px 28px rgba(0,0,0,.28); font-size: 13px; line-height: 1.45; text-transform: none; letter-spacing: 0; font-weight: 400; white-space: normal; opacity: 0; pointer-events: none; transition: opacity .12s; }
+#tip.show { opacity: 1; pointer-events: auto; }
+#tip a { color: var(--accent); font-weight: 600; }
+#tip .tip-hook { margin: 6px 0; font-style: italic; }
+#tip .tip-row { display: flex; align-items: center; gap: 8px; margin-top: 4px; }
+.has-tip > span, .strip .has-tip { text-decoration: underline dotted color-mix(in srgb, var(--muted) 70%, transparent); text-underline-offset: 3px; cursor: help; }
+.sell-sheet th { vertical-align: middle; }
+.sell-sheet td { height: 48px; }
+.sell-sheet .num { font-variant-numeric: tabular-nums; cursor: default; }
+.sell-sheet .num.strong { font-weight: 700; color: var(--text); }
+.sell-sheet .num.off { color: var(--warn-ink); }
+.comp-link.thin-u { text-decoration: underline dotted; text-underline-offset: 3px; }
+.sell-sheet .cell-select { width: 168px; min-width: 0; border-color: transparent; background-color: color-mix(in srgb, currentColor 9%, var(--surface)); }
+.sell-sheet .cell-select:hover, .sell-sheet .cell-select:focus { border-color: var(--line); }
+.sell-sheet .btn.small.ghost { min-height: 30px; padding: 0 12px; font-size: 13px; font-weight: 600; color: var(--accent); }
+.sold-sum { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 34px; padding: 4px 8px; border-radius: 8px; text-align: left; font-size: 13px; color: var(--text); }
+.sold-sum:hover { background: color-mix(in srgb, var(--accent) 9%, transparent); }
+.sold-sum .person { margin: 0; }
+.sold-sum .edit-hint { margin-left: auto; font-size: 12px; font-weight: 600; color: var(--accent); }
+.tag-ok { font-size: 12px; font-weight: 700; color: var(--good); white-space: nowrap; }
+.tag-wait { font-size: 12px; font-weight: 700; color: var(--warn-ink); background: var(--warn-bg); padding: 2px 8px; border-radius: 999px; white-space: nowrap; }
+@media (max-width: 760px) { .sell-sheet .cell-select { width: 196px; } }

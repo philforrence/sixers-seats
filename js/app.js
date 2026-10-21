@@ -26,8 +26,11 @@ async function boot() {
   document.addEventListener('click', onClick);
   document.addEventListener('change', onChange);
   document.addEventListener('input', onInput);
+  document.addEventListener('mouseover', onHover);
+  document.addEventListener('scroll', () => tipFor && hideTip(), true);
   document.addEventListener('keydown', e => {
     if (e.key === 'Escape' && (state.pitch || state.saleForm)) { state.pitch = null; state.saleForm = null; return render(); }
+    if (e.key === 'Escape' && tipFor) return hideTip();
     if (e.key === 'Escape' && state.open) closeGame();
     // Enter in a sheet cell commits it, like a spreadsheet.
     if (e.key === 'Enter' && e.target.classList?.contains('cell-in')) e.target.blur();
@@ -206,6 +209,7 @@ function priceChart(m, g) {
 // ---------------------------------------------------------------- render
 
 function render() {
+  hideTip();
   const app = $('#app');
   if (!state.user) { app.innerHTML = signInView(); return; }
   if (state.loading && !state.games.length) { app.innerHTML = shell('<div class="loading"><div class="ball"></div>Loading your season…</div>'); return; }
@@ -288,10 +292,12 @@ function assignSelect(g) {
 // Who got a sale's payout: one tap on a name.
 const payeeSeg = g => `<span class="seg tiny" role="group" aria-label="Paid out to">${CONFIG.PARTNERS.map(p => `<button class="${g.paidTo === p ? 'on' : ''}" data-act="paidto:${g.id}|${esc(p)}">${esc(p)}</button>`).join('')}</span>`;
 const autoPayout = g => netPayout(g.soldPrice, g.qtySold || seatCount(), feePct(state.settings, g.platform));
-const payoutIn = g => moneyIn(g, 'payout', g.payout, Math.round(autoPayout(g) * 100) / 100, `wide ${g.payout != null ? 'set' : ''}`, 'Payout amount');
+const cash = n => money(n, Number.isInteger(n) ? 0 : 2);
+const cents = n => n == null ? null : Number.isInteger(n) ? n : n.toFixed(2);
+const payoutIn = g => moneyIn(g, 'payout', cents(g.payout), cents(Math.round(autoPayout(g) * 100) / 100), `wide ${g.payout != null ? 'set' : ''}`, 'Payout amount');
 const tmResales = () => state.games.filter(g => g.platform === 'Ticketmaster' && (g.listPrice != null || g.soldPrice != null)).length;
 
-const gameCell = g => `<button class="game-cell" data-open="${g.id}">${logo(g, 22)}<b>${team(g.opp).abbr}</b><span><i class="wd">${fmtDate(g, { weekday: 'short' })} </i>${fmtDate(g, { month: 'numeric', day: 'numeric' })}</span></button>`;
+const gameCell = (g, tip) => `<button class="game-cell" data-open="${g.id}"${tip ? ` data-tip="${esc(tip)}"` : ''}>${logo(g, 22)}<b>${team(g.opp).abbr}</b><span><i class="wd">${fmtDate(g, { weekday: 'short' })} </i>${fmtDate(g, { month: 'numeric', day: 'numeric' })}</span></button>`;
 const sellGames = () => state.games.filter(g => state.showPast || !isPast(g));
 const goingWith = name => g => g.plan === 'use' && holders(g).includes(name);
 const selling = g => g.plan === 'sell' || g.soldPrice != null;
@@ -344,7 +350,7 @@ function withMarkers(rows, cols, renderRow) {
     const toSell = tr.games.filter(g => g.plan === 'sell' && g.soldPrice == null).length;
     const undecided = tr.games.filter(g => g.plan === 'undecided').length;
     const done = tr.decideBy < now;
-    items.push({ t: startTime(vis[0]).getTime() - 1, html: `<tr class="mk band t${tr.n}"><td colspan="${cols}"><div class="mk-line"><span class="mk-flag">Tranche ${tr.n} · ${rangeLabel(tr.first, tr.last)} · ${tr.games.length} games · ${toSell} to sell${undecided ? ` · ${undecided} undecided` : ''} · ${done ? 'decided' : 'decide by ' + dayLabel(tr.decideBy)}</span></div></td></tr>` });
+    items.push({ t: startTime(vis[0]).getTime() - 1, html: `<tr class="mk band t${tr.n}"><td colspan="${cols}"><div class="mk-line"><span class="mk-flag">Tranche ${tr.n} · ${rangeLabel(tr.first, tr.last)} · ${toSell} to sell${undecided ? ` · ${undecided} undecided` : ''} · ${done ? 'decided' : 'decide by ' + dayLabel(tr.decideBy)}</span></div></td></tr>` });
   }
   if (state.showPast && rows.some(g => isPast(g)) && rows.some(g => !isPast(g))) items.push({ t: now.getTime(), html: `<tr class="mk today"><td colspan="${cols}"><div class="mk-line"><span class="mk-flag">Today · ${dayLabel(now)}</span></div></td></tr>` });
   return items.sort((a, b) => a.t - b.t).map(i => i.html).join('');
@@ -464,28 +470,36 @@ function sellView() {
   if (!tabs.find(t => t[0] === state.sellTab)) state.sellTab = 'all';
   const rows = games.filter(tabs.find(t => t[0] === state.sellTab)[2]);
   const pct = Number(S.ffDiscount) || 20;
-  const cols = 9;
+  const cols = 8;
   const row = g => {
     const st = assignment(g);
     if (st === 'sold') return soldLine(g);
     const p = pitchPrices(g, null, pct), forSale = st === 'sell' || st === 'listed' || st === 'friend';
+    const off = st === 'listed' && p.tm != null && g.listPrice !== p.tm;
+    const fTip = esc(friendTip(p, pct));
     return `<tr class="${windowOf(g)} ${isPast(g) ? 'past-row' : ''}">
-      <td class="sticky">${gameCell(g)}</td>
+      <td class="sticky">${gameCell(g, gameTip(g))}</td>
       <td class="nowrap">${winChip(g)}</td>
       <td>${assignSelect(g)}</td>
-      <td class="r nowrap">${compCell(g)}</td>
-      <td class="r nowrap">${forSale ? `<b>${money(p.tm)}</b> <small class="muted">${p.L.now.short}</small>` : `<span class="muted" title="What these seats would list for today">${money(p.tm)}</span>`}</td>
-      <td class="r nowrap"><b>${money(p.friend)}</b></td>
-      <td class="r nowrap">${money(p.ff)}</td>
-      <td class="hook-cell">${esc(hookFor(g))}</td>
-      <td class="r">${isPast(g) ? '' : `<button class="btn small" data-act="pitch:${g.id}">Pitch</button>`}</td>
+      <td class="r nowrap">${compLean(g)}</td>
+      <td class="r nowrap"><span class="num ${forSale ? 'strong' : 'muted'} ${off ? 'off' : ''}" data-tip="${esc(tmTip(g, p))}">${money(p.tm)}</span></td>
+      <td class="r nowrap"><span class="num strong" data-tip="${fTip}">${money(p.friend)}</span></td>
+      <td class="r nowrap"><span class="num muted" data-tip="${fTip}">${money(p.ff)}</span></td>
+      <td class="r">${isPast(g) ? '' : `<button class="btn small ghost" data-act="pitch:${g.id}">Pitch</button>`}</td>
     </tr>`;
   };
-  const head = `<tr><th class="sticky">Game</th><th>Out</th><th>Status</th><th class="r" title="Cheapest similar pair on Vivid Seats, fees included — click to open it">Comp<br><small>with fees</small></th><th class="r" title="Today's step on the price ladder — what to list at on Ticketmaster">TM now<br><small>ladder</small></th><th class="r" title="What similar seats cost online, fees included">Friend<br><small>each, today</small></th><th class="r">F&amp;F<br><small>${pct}% off</small></th><th>Hook</th><th></th></tr>`;
+  const th = (label, tip, cls = '') => `<th class="${cls} has-tip"><span data-tip="${esc(tip)}">${label}</span></th>`;
+  const outTip = `<b>Days out</b>${['far', 'w14', 'w5', 'w2'].map(w => `<div class="tip-row"><i class="win-dot ${w}"></i>${WINDOW_LABEL[w]}</div>`).join('')}`;
+  const head = `<tr><th class="sticky">Game</th>${th('Out', outTip)}${th('Status', "Who's going, or where the game is in selling. <b>On Ticketmaster</b> shows its list price; <b>Sold…</b> logs a sale.")}
+    ${th('Comp', 'The cheapest pair in rows 1–3 of sections 201–203 and 223–224 on Vivid Seats, price per ticket with fees. <b>find</b> means no comp yet, so the price is estimated.', 'r')}
+    ${th('TM now', `Today's step on the price ladder: what to list at on Ticketmaster. Stretch is 15% over the 14-day price, then 14 days, 5 days (−15%) and 2 days (−30%) out. Amber means our listing doesn't match it.`, 'r')}
+    ${th('Friend', 'What similar seats cost online with fees included. What we charge people we know.', 'r')}
+    ${th('F&amp;F', `Friend price minus ${pct}%, rounded down to $5.`, 'r')}<th></th></tr>`;
   const going = games.filter(g => g.plan === 'use' && g.soldPrice == null).length;
   const toSell = games.filter(g => g.plan === 'sell' && g.soldPrice == null).length;
   const sold = games.filter(g => g.soldPrice != null).length, und = games.filter(g => g.plan === 'undecided' && g.soldPrice == null).length;
   const cap = Number(S.resaleCap) || 0, onTM = tmResales();
+  const tmListed = state.games.filter(g => g.platform === 'Ticketmaster' && g.listPrice != null && g.soldPrice == null).length;
   return `
   <div class="view-head"><h1>Sell</h1>
     <label class="toggle small"><input type="checkbox" data-act-check="showpast" ${state.showPast ? 'checked' : ''}><span>Show past games</span></label>
@@ -494,30 +508,61 @@ function sellView() {
   <div class="tabs" role="tablist">${tabs.map(([k, l, f]) => `<button role="tab" class="${state.sellTab === k ? 'on' : ''}" aria-selected="${state.sellTab === k}" data-act="tab:${k}">${esc(l)} <span class="count">${games.filter(f).length}</span></button>`).join('')}</div>
   <div class="strip">
     <span><b>${going}</b> going</span><span><b>${toSell}</b> to sell</span><span><b>${sold}</b> sold</span>${und ? `<span class="warn-t"><b>${und}</b> undecided</span>` : ''}
-    <span class="${cap && onTM > cap ? 'bad' : cap && onTM === cap ? 'warn-t' : ''}" title="Games listed or sold on Ticketmaster, against its resale limit (we're assuming ${cap || '—'})"><b>${onTM}</b> of ${cap || '—'} Ticketmaster resales used</span>
+    <span class="has-tip ${cap && onTM > cap ? 'bad' : cap && onTM === cap ? 'warn-t' : ''}" data-tip="${esc(`Games listed or sold on Ticketmaster: ${tmListed} listed, ${onTM - tmListed} sold. We're assuming the resale limit is ${cap || '—'} until Andrew confirms it in Account Manager.`)}"><b>${onTM}/${cap || '—'}</b> Ticketmaster resales</span>
   </div>
-  <div class="win-legend">${['far', 'w14', 'w5', 'w2'].map(w => `<span><i class="win-dot ${w}"></i>${WINDOW_LABEL[w]}</span>`).join('')}</div>
   <div class="sheet-wrap"><table class="sheet sell-sheet">
     <thead>${head}</thead>
     <tbody>${rows.length ? withMarkers(rows, cols, row) : `<tr><td colspan="${cols}" class="muted pad">No games here yet.</td></tr>`}</tbody>
   </table></div>
-  <p class="muted small legend-p"><b>Status</b> is who's going, or where a game is in selling. <b>On Ticketmaster</b> shows the price it's listed at; type over it when you change the listing. <b>Sold…</b> logs a sale, and the line then shows who got the payout and how much (blank = automatic, after the ${feePct(S, 'Ticketmaster')}% Ticketmaster fee). <b>TM now</b> is today's step on the price ladder; click a game to see or change all four steps and who's in the seats. <b>Friend</b> is what similar seats cost online with fees included; F&amp;F takes ${pct}% off. <b>Comp</b> links to the listing it came from. The colored bands are selling tranches.</p>`;
+  <p class="muted small legend-p">${HOVER ? 'Hover' : 'Tap'} a price or a column name for details. ${HOVER ? 'Click' : 'Tap'} a game for its price ladder, seats and notes.</p>`;
 }
 
-// A sold line: what it went for, who got the payout and how much, and whether it's all done.
+// Popover text for the Sell table.
+const dShort = d => d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+function gameTip(g) {
+  const m = mkt(g);
+  return `<b>${esc(g.opp)}</b><br>${fmtDate(g, { weekday: 'long', month: 'short', day: 'numeric' })} · ${esc(g.time)}${m?.tv ? ' · ' + esc(m.tv) : ''}<div class="tip-hook">“${esc(hookFor(g))}”</div><span class="muted">Click for the price ladder, seats and notes</span>`;
+}
+function tmTip(g, p) {
+  const L = p.L, n = seatCount(), fee = feePct(state.settings, 'Ticketmaster');
+  if (p.tm == null) return 'No price yet: no comp and no market data for this game.';
+  const lines = [`<b>${L.now.label} price</b> · ${L.now.window}`, `${money(p.tm)} × ${n} nets ${money(netPayout(p.tm, n, fee))} after Ticketmaster's ${fee}%.`];
+  lines.push(L.nextAt ? `Steps down to ${money(L.next.value)} on ${dShort(L.nextAt)}.` : 'Last step: price it to move, or keep the seats.');
+  if (assignment(g) === 'listed' && g.listPrice !== p.tm) lines.push(`<span class="warn-t">We're listed at ${money(g.listPrice)}, ${g.listPrice > p.tm ? 'above' : 'below'} the ladder.</span>`);
+  return lines.join('<br>');
+}
+const friendTip = (p, pct) => `<b>${money(p.friend)}</b> each: what similar seats cost online, fees included.<br>F&amp;F: <b>${money(p.ff)}</b> (${pct}% off, rounded down to $5).<br>Come with me: one seat at ${money(p.ff)}.`;
+
+// The comp, lean: just the price, with the details and the listing link in its popover.
+function compLean(g) {
+  const day = iso => new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  if (g.comp != null) {
+    const href = g.compUrl || g.compSearch, thin = g.compN != null && g.compN < 3;
+    const tip = `<b>${money(g.comp)}</b> a ticket, fees included<br>${[g.compNote, g.compN != null ? `${g.compN} similar pair${g.compN === 1 ? '' : 's'} listed` : '', g.compAt ? 'checked ' + day(g.compAt) : ''].filter(Boolean).map(esc).join(' · ')}${thin ? '<br><span class="warn-t">Only a few similar listings, so treat it with care.</span>' : ''}${href ? `<br><a href="${esc(href)}" target="_blank" rel="noopener">Open on Vivid Seats ↗</a>` : ''}`;
+    return href ? `<a class="comp-link ${thin ? 'thin-u' : ''}" href="${esc(href)}" target="_blank" rel="noopener" data-tip="${esc(tip)}">${money(g.comp)}</a>` : `<span class="comp-link" data-tip="${esc(tip)}">${money(g.comp)}</span>`;
+  }
+  if (g.compIgnored) {
+    const x = g.compIgnored, href = x.url || g.compSearch;
+    const tip = `<b>Not used:</b> ${money(x.price)} from only ${x.n} similar listing${x.n === 1 ? '' : 's'}, ${x.ratio.toFixed(1)}× the cheapest ticket (typical is ${x.typical.toFixed(1)}×). The estimate is used instead.${href ? `<br><a href="${esc(href)}" target="_blank" rel="noopener">Open on Vivid Seats ↗</a>` : ''}`;
+    return `<a class="comp-link ignored" href="${esc(href)}" target="_blank" rel="noopener" data-tip="${esc(tip)}">${money(x.price)}</a>`;
+  }
+  return g.compSearch ? `<a class="comp-find" href="${esc(g.compSearch)}" target="_blank" rel="noopener" data-tip="${esc(`No comp checked yet, so prices are estimated from the cheapest ticket.<br><a href="${esc(g.compSearch)}" target="_blank" rel="noopener">Find one on Vivid Seats ↗</a>`)}">find</a>` : '<span class="muted">—</span>';
+}
+
+// A sold game on one line: what it went for, who got paid and how much, and whether it's done. Click to edit.
 function soldLine(g) {
-  const qty = g.qtySold || seatCount();
-  return `<tr class="sold-line ${saleDone(g) ? 'done' : ''} ${isPast(g) ? 'past-row' : ''}">
+  const qty = g.qtySold || seatCount(), done = saleDone(g);
+  const where = g.platform === FRIEND ? 'to a friend' : 'on ' + esc(g.platform || '—');
+  const who = CONFIG.PARTNERS.includes(g.paidTo) ? `<span class="person ${g.paidTo === P1 ? 'p1' : 'p2'}">${esc(g.paidTo)}</span>` : '<span class="person guest">Who got paid?</span>';
+  const tag = done ? '<span class="tag-ok">✓ Done</span>' : `<span class="tag-wait">${!g.paid ? 'Payout pending' : 'Transfer pending'}</span>`;
+  const tip = `<b>${qty} @ ${money(g.soldPrice)}</b> ${where}${g.buyer ? ' · ' + esc(g.buyer) : ''}${g.soldOn ? ' · sold ' + esc(new Date(g.soldOn + 'T12:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })) : ''}<br>Money in: ${g.paid ? 'yes' : 'not yet'} · Transferred: ${g.transferred ? 'yes' : 'not yet'}<br><span class="muted">Click to change who got paid, the amount, or either box</span>`;
+  return `<tr class="sold-line ${done ? 'done' : ''} ${isPast(g) ? 'past-row' : ''}">
     <td class="sticky">${gameCell(g)}</td>
     <td class="nowrap">${winChip(g)}</td>
     <td>${assignSelect(g)}</td>
-    <td colspan="5"><div class="sold-info">
-      <span class="nowrap"><b>${qty} @ ${money(g.soldPrice)}</b> <span class="muted">${g.platform === FRIEND ? 'to a friend' : 'on ' + esc(g.platform || '—')}${g.buyer ? ' · ' + esc(g.buyer) : ''}</span></span>
-      <span class="nowrap"><span class="muted small">Paid out to</span> ${payeeSeg(g)} ${payoutIn(g)}</span>
-      <label class="mini"><input type="checkbox" data-gid="${g.id}" data-flag="paid" ${g.paid ? 'checked' : ''}>money in</label>
-      <label class="mini"><input type="checkbox" data-gid="${g.id}" data-flag="transferred" ${g.transferred ? 'checked' : ''}>transferred</label>
-    </div></td>
-    <td class="r"><button class="link small" data-act="saleedit:${g.id}">Edit</button></td>
+    <td colspan="5"><button class="sold-sum" data-act="saleedit:${g.id}" data-tip="${esc(tip)}">
+      <span class="muted nowrap">${qty} @ ${money(g.soldPrice)}</span>${who}<b class="num">${cash(received(g, state.settings))}</b>${tag}<span class="edit-hint">Edit</span>
+    </button></td>
   </tr>`;
 }
 
@@ -1284,6 +1329,35 @@ function refreshDrawer() {
   if (d2) d2.scrollTop = top;
 }
 
+// ---------------------------------------------------------------- popovers
+// Anything with data-tip (HTML) shows a small popover: on hover with a mouse, on tap on a phone.
+
+const HOVER = matchMedia('(hover: hover) and (pointer: fine)').matches;
+let tipBox, tipFor = null, tipTimer;
+function showTip(el) {
+  if (!tipBox) { tipBox = document.createElement('div'); tipBox.id = 'tip'; tipBox.setAttribute('role', 'tooltip'); }
+  if (!tipBox.isConnected) document.body.appendChild(tipBox);
+  tipBox.innerHTML = el.dataset.tip;
+  tipBox.className = 'show';
+  tipFor = el;
+  const r = el.getBoundingClientRect(), w = tipBox.offsetWidth, h = tipBox.offsetHeight;
+  tipBox.style.left = Math.max(8, Math.min(innerWidth - w - 8, r.left + r.width / 2 - w / 2)) + 'px';
+  tipBox.style.top = (r.bottom + 8 + h < innerHeight || r.top - h - 8 < 0 ? r.bottom + 8 : r.top - h - 8) + 'px';
+}
+function hideTip() {
+  clearTimeout(tipTimer);
+  if (tipBox) tipBox.className = '';
+  tipFor = null;
+}
+function onHover(e) {
+  if (!HOVER) return;
+  if (e.target.closest('#tip')) return clearTimeout(tipTimer);  // let the mouse move onto the popover to use its links
+  const el = e.target.closest('[data-tip]');
+  if (el === tipFor) return clearTimeout(tipTimer);
+  clearTimeout(tipTimer);
+  tipTimer = setTimeout(() => (el ? showTip(el) : hideTip()), el ? (tipFor ? 0 : 220) : 180);
+}
+
 // ---------------------------------------------------------------- events
 
 function currentGame() { return state.games.find(x => x.id === state.open); }
@@ -1291,6 +1365,12 @@ function currentGame() { return state.games.find(x => x.id === state.open); }
 async function onClick(e) {
   const openEl = e.target.closest('[data-open]');
   const actEl = e.target.closest('[data-act]');
+  // On touch screens a tap shows the popover (links inside it still work); a tap anywhere else closes it.
+  const tipEl = e.target.closest('[data-tip]');
+  if (!e.target.closest('#tip')) {
+    if (tipEl && !HOVER && !actEl && !openEl) { e.preventDefault(); return tipFor === tipEl ? hideTip() : showTip(tipEl); }
+    hideTip();
+  }
   if (actEl) {
     const [act, arg] = actEl.dataset.act.split(/:(.*)/s);
     e.preventDefault();
