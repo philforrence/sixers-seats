@@ -520,7 +520,6 @@ a.comp-link:hover { text-decoration: underline; }
 .mini { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; color: var(--muted); white-space: nowrap; cursor: pointer; }
 .mini input { width: 16px; height: 16px; accent-color: var(--accent); }
 .sheet tr.sold-line td { background: color-mix(in srgb, var(--c-sold) 7%, var(--surface)); }
-.sheet tr.sold-line.done td { background: color-mix(in srgb, var(--c-sold) 13%, var(--surface)); }
 .payees { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin: 14px 0; }
 .payee { display: flex; flex-direction: column; gap: 2px; background: var(--surface); border: 1px solid var(--line); border-left: 5px solid var(--p1); border-radius: 12px; padding: 12px 14px; }
 .payee.p2 { border-left-color: var(--p2); }
@@ -546,8 +545,13 @@ a.comp-link:hover { text-decoration: underline; }
 .sell-sheet .pitch-btn { gap: 6px; padding: 0 12px 0 10px; }
 .pitch-btn svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 .sold-sum { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 34px; padding: 4px 8px; border-radius: 8px; text-align: left; font-size: 13px; color: var(--text); }
+.sold-sum { flex-wrap: wrap; row-gap: 4px; }
+.sold-sum > span, .sold-sum > b { white-space: nowrap; }
 .sold-sum:hover { background: color-mix(in srgb, var(--accent) 9%, transparent); }
-.sold-sum .person { margin: 0; }
+.who-p1 { color: var(--p1); } .who-p2 { color: var(--p2); }
+.sold-arrow { color: var(--muted); }
+.sold-line.done .cell-select.a-sold { color: var(--good); }
+.sheet tr.sold-line.done td { background: color-mix(in srgb, var(--good) 8%, var(--surface)); }
 .sold-sum .edit-hint { margin-left: auto; font-size: 12px; font-weight: 600; color: var(--accent); }
 .tag-ok { font-size: 12px; font-weight: 700; color: var(--good); white-space: nowrap; }
 .tag-wait { font-size: 12px; font-weight: 700; color: var(--warn-ink); background: var(--warn-bg); padding: 2px 8px; border-radius: 999px; white-space: nowrap; }

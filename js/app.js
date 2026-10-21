@@ -284,7 +284,7 @@ const TM_PAYEE = P2;
 function assignSelect(g) {
   const cur = assignment(g);
   const opts = (cur === 'custom' ? [['custom', 'Guests only'], ...ASSIGN] : ASSIGN)
-    .map(([k, l]) => `<option value="${k}" ${k === cur ? 'selected' : ''}>${esc(k === 'sold' && cur === 'sold' ? 'Sold' : l)}</option>`).join('');
+    .map(([k, l]) => `<option value="${k}" ${k === cur ? 'selected' : ''}>${esc(k === 'sold' && cur === 'sold' ? '✓ Sold' : l)}</option>`).join('');
   const sel = `<select class="cell-select a-${cur}" data-gid="${g.id}" data-assign aria-label="Status">${opts}</select>`;
   return cur === 'listed' ? `<span class="status-cell">${sel}${moneyIn(g, 'listPrice', g.listPrice, '—', 'set', 'Ticketmaster list price')}</span>` : sel;
 }
@@ -544,19 +544,27 @@ function compLean(g) {
   return g.compSearch ? `<a class="comp-find" href="${esc(g.compSearch)}" target="_blank" rel="noopener" data-tip="${esc(`No comp checked yet, so prices are estimated from the cheapest ticket.<br><a href="${esc(g.compSearch)}" target="_blank" rel="noopener">Find one on Vivid Seats ↗</a>`)}">find</a>` : '<span class="muted">—</span>';
 }
 
-// A sold game on one line: what it went for, who got paid and how much, and whether it's done. Click to edit.
+// A sold game as one plain sentence: what sold, where the money went, and what's left to do. Click to edit.
 function soldLine(g) {
-  const qty = g.qtySold || seatCount(), done = saleDone(g);
+  const qty = g.qtySold || seatCount(), done = saleDone(g), amt = `<b>${cash(received(g, state.settings))}</b>`;
   const where = g.platform === FRIEND ? 'to a friend' : 'on ' + esc(g.platform || '—');
-  const who = CONFIG.PARTNERS.includes(g.paidTo) ? `<span class="person ${g.paidTo === P1 ? 'p1' : 'p2'}">${esc(g.paidTo)}</span>` : '<span class="person guest">Who got paid?</span>';
-  const tag = done ? '<span class="tag-ok">✓ Done</span>' : `<span class="tag-wait">${!g.paid ? 'Payout pending' : 'Transfer pending'}</span>`;
-  const tip = `<b>${qty} @ ${money(g.soldPrice)}</b> ${where}${g.buyer ? ' · ' + esc(g.buyer) : ''}${g.soldOn ? ' · sold ' + esc(new Date(g.soldOn + 'T12:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })) : ''}<br>Money in: ${g.paid ? 'yes' : 'not yet'} · Transferred: ${g.transferred ? 'yes' : 'not yet'}<br><span class="muted">Click to change who got paid, the amount, or either box</span>`;
+  const who = CONFIG.PARTNERS.includes(g.paidTo) ? `<b class="who-${g.paidTo === P1 ? 'p1' : 'p2'}">${esc(g.paidTo)}</b>` : '';
+  const money_ = !who ? `${amt} <span class="muted">paid out to ?</span>` : g.paid ? `${who} got ${amt}` : `${amt} on its way to ${who}`;
+  const left = done ? '<span class="tag-ok">✓ All set</span>'
+    : !who ? '<span class="tag-wait">Who got paid?</span>'
+    : !g.paid ? '<span class="tag-wait">Waiting on the payout</span>'
+    : '<span class="tag-wait">Transfer the tickets</span>';
+  const tip = `${g.buyer ? 'Buyer: ' + esc(g.buyer) + '<br>' : ''}${g.soldOn ? 'Sold ' + esc(new Date(g.soldOn + 'T12:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })) + '<br>' : ''}Money in: ${g.paid ? '✓ yes' : 'not yet'}<br>Tickets transferred: ${g.transferred ? '✓ yes' : 'not yet'}<br><span class="muted">Click to change who got paid, the amount, or either box</span>`;
   return `<tr class="sold-line ${done ? 'done' : ''} ${isPast(g) ? 'past-row' : ''}">
     <td class="sticky">${gameCell(g)}</td>
     <td class="nowrap">${winChip(g)}</td>
     <td>${assignSelect(g)}</td>
     <td colspan="3"><button class="sold-sum" data-act="saleedit:${g.id}" data-tip="${esc(tip)}">
-      <span class="muted nowrap">${qty} @ ${money(g.soldPrice)}</span>${who}<b class="num">${cash(received(g, state.settings))}</b>${tag}<span class="edit-hint">Edit</span>
+      <span class="nowrap">${qty} ticket${qty === 1 ? '' : 's'} × ${money(g.soldPrice)} <span class="muted">${where}</span></span>
+      <span class="sold-arrow" aria-hidden="true">→</span>
+      <span class="nowrap">${money_}</span>
+      ${left}
+      <span class="edit-hint">Edit sale</span>
     </button></td>
   </tr>`;
 }
@@ -631,9 +639,10 @@ function saleModal() {
   if (!F) return '';
   const names = (state.contacts || []).map(c => c.name);
   const games = state.games.filter(g => !isPast(g) || g.soldPrice != null);
+  const title = state.games.find(x => x.id === F.id)?.soldPrice != null ? 'Edit sale' : 'Log a sale';
   return `<div class="scrim" data-act="sclose"></div>
-  <div class="modal small-modal" role="dialog" aria-modal="true" aria-label="Log a sale">
-    <div class="m-head"><h2>Log a sale</h2><button class="icon-btn" data-act="sclose" aria-label="Close">✕</button></div>
+  <div class="modal small-modal" role="dialog" aria-modal="true" aria-label="${title}">
+    <div class="m-head"><h2>${title}</h2><button class="icon-btn" data-act="sclose" aria-label="Close">✕</button></div>
     <div class="m-body">
       <div class="m-grid">
         <label class="field wide"><span>Game</span><select data-sf="id">${games.map(g => `<option value="${g.id}" ${g.id === F.id ? 'selected' : ''}>${team(g.opp).abbr} · ${fmtDate(g)}</option>`).join('')}</select></label>
