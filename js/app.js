@@ -482,7 +482,7 @@ function sellView() {
       <td>${assignSelect(g)}</td>
       <td class="r nowrap">${compLean(g)}</td>
       <td class="r nowrap"><span class="num ${forSale ? 'strong' : 'muted'} ${off ? 'off' : ''}" data-tip="${esc(tmTip(g, p) + '<div class="tip-sep"></div>' + friendTip(p, pct))}">${money(p.tm)}</span></td>
-      <td class="r">${isPast(g) ? '' : `<button class="btn small ghost" data-act="pitch:${g.id}">Pitch</button>`}</td>
+      <td class="r">${isPast(g) ? '' : `<button class="btn small pitch-btn" data-act="pitch:${g.id}" aria-haspopup="dialog"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2.5"/><path d="M3 9h18M7 13h7M7 16h4"/></svg>Pitch</button>`}</td>
     </tr>`;
   };
   const th = (label, tip, cls = '') => `<th class="${cls} has-tip"><span data-tip="${esc(tip)}">${label}</span></th>`;
@@ -561,6 +561,9 @@ function soldLine(g) {
   </tr>`;
 }
 
+// Our seat-view photo (seat-view.jpg, Phil's photo from the seats). Loaded when a pitch opens so Share / Copy can use it inside the tap,
+// which iOS requires. Safari's clipboard only takes PNG, so we keep a PNG copy too.
+const PHOTO = () => state.settings.seatPhoto || 'seat-view.jpg';
 async function loadViewFile() {
   if (state.viewFile) return;
   try {
