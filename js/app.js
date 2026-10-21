@@ -6,7 +6,7 @@ import { team, TEAM_NAMES } from './teams.js';
 import { TYPES, VARIANTS, buildMessage, defaultHook, splitEmail, firstName } from './messages.js';
 import {
   status, STATUS_LABEL, isPast, daysUntil, startTime, holders, estimate, trend, seatMultiplier, market,
-  netPayout, feePct, ledger, money, PLATFORMS, setSeatCount, parseDate, STEPS, ladder, floorPrice, hoursUntil, FRIEND, applyComps, guardComps, tranches, trancheOf, friendPrice, ffPrice, windowOf, WINDOW_LABEL, saleDone, received,
+  netPayout, feePct, ledger, money, PLATFORMS, setSeatCount, parseDate, ladder, floorPrice, hoursUntil, FRIEND, applyComps, guardComps, tranches, trancheOf, friendPrice, ffPrice, windowOf, WINDOW_LABEL, saleDone, received,
 } from './model.js';
 
 const [P1, P2] = CONFIG.PARTNERS;
@@ -15,7 +15,7 @@ const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': 
 
 const state = {
   user: null, games: [], settings: {}, prices: { games: {} }, mult: { value: 1, basis: 'default' },
-  view: 'sell', sellFilter: 'sell', contacts: [], hooks: null, pitch: null, saleForm: null, stratTab: 'all', showPast: false, open: null, filter: 'upcoming', gamesMode: 'list', marketSort: 'value', loading: true, error: '',
+  view: 'sell', sellTab: 'all', contacts: [], hooks: null, pitch: null, saleForm: null, showPast: false, open: null, filter: 'upcoming', gamesMode: 'list', marketSort: 'value', loading: true, error: '',
 };
 const store = DEMO ? new DemoStore() : new SheetStore();
 
@@ -27,7 +27,7 @@ async function boot() {
   document.addEventListener('change', onChange);
   document.addEventListener('input', onInput);
   document.addEventListener('keydown', e => {
-    if (e.key === 'Escape' && (state.pitch || state.saleForm)) { state.pitch = null; state.saleForm = null; return renderModal(); }
+    if (e.key === 'Escape' && (state.pitch || state.saleForm)) { state.pitch = null; state.saleForm = null; return render(); }
     if (e.key === 'Escape' && state.open) closeGame();
     // Enter in a sheet cell commits it, like a spreadsheet.
     if (e.key === 'Enter' && e.target.classList?.contains('cell-in')) e.target.blur();
@@ -114,8 +114,9 @@ async function saveSettings() {
 // ---------------------------------------------------------------- routing
 
 function route(doRender = true) {
-  const [view, id] = location.hash.replace(/^#\/?/, '').split('/');
-  state.view = ['sell', 'strategy', 'contacts', 'sales', 'home', 'games', 'market', 'split', 'settings'].includes(view) ? view : 'sell';
+  let [view, id] = location.hash.replace(/^#\/?/, '').split('/');
+  view = { strategy: 'sell', sales: 'payouts' }[view] || view;  // older links
+  state.view = ['sell', 'contacts', 'payouts', 'home', 'games', 'market', 'split', 'settings'].includes(view) ? view : 'sell';
   state.open = id || null;
   if (doRender) render();
 }
@@ -209,18 +210,18 @@ function render() {
   if (!state.user) { app.innerHTML = signInView(); return; }
   if (state.loading && !state.games.length) { app.innerHTML = shell('<div class="loading"><div class="ball"></div>Loading your season…</div>'); return; }
   if (state.error && !state.games.length) { app.innerHTML = shell(`<div class="card error"><h2>Something's off</h2><p>${esc(state.error)}</p><button class="btn" data-act="reload">Try again</button></div>`); return; }
-  const views = { sell: sellView, contacts: contactsView, sales: salesView, strategy: strategyView, home: homeView, games: gamesView, market: marketView, split: splitView, settings: settingsView };
+  const views = { sell: sellView, contacts: contactsView, payouts: payoutsView, home: homeView, games: gamesView, market: marketView, split: splitView, settings: settingsView };
+  const d = $('.drawer'), keep = d && { id: d.dataset.drawer, top: d.scrollTop };
   app.innerHTML = shell(views[state.view]());
-  renderDrawer();
+  renderDrawer(keep);
   renderModal();
 }
 
 function shell(content) {
   const nav = [
     ['sell', 'Sell', '<path d="M3 12l8-8h7v7l-8 8z"/><circle cx="14.5" cy="7.5" r="1.4"/>'],
-    ['strategy', 'Strategy', '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M3 14h18M9 9v11M15 9v11"/>'],
     ['contacts', 'Contacts', '<circle cx="12" cy="8" r="3.5"/><path d="M5 20c.9-3.6 3.7-5.5 7-5.5s6.1 1.9 7 5.5"/>'],
-    ['sales', 'Sales', '<path d="M12 3v18"/><path d="M16.5 7.5c0-1.7-2-3-4.5-3s-4.5 1.3-4.5 3 2 2.6 4.5 3 4.5 1.4 4.5 3.2-2 3-4.5 3-4.5-1.3-4.5-3"/>'],
+    ['payouts', 'Payouts', '<path d="M12 3v18"/><path d="M16.5 7.5c0-1.7-2-3-4.5-3s-4.5 1.3-4.5 3 2 2.6 4.5 3 4.5 1.4 4.5 3.2-2 3-4.5 3-4.5-1.3-4.5-3"/>'],
     ['settings', 'Settings', '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 00.3 1.8l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.7 1.7 0 00-1.8-.3 1.7 1.7 0 00-1 1.5V21a2 2 0 11-4 0v-.1a1.7 1.7 0 00-1.1-1.5 1.7 1.7 0 00-1.8.3l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.7 1.7 0 00.3-1.8 1.7 1.7 0 00-1.5-1H3a2 2 0 110-4h.1a1.7 1.7 0 001.5-1.1 1.7 1.7 0 00-.3-1.8l-.1-.1a2 2 0 112.8-2.8l.1.1a1.7 1.7 0 001.8.3H9a1.7 1.7 0 001-1.5V3a2 2 0 114 0v.1a1.7 1.7 0 001 1.5 1.7 1.7 0 001.8-.3l.1-.1a2 2 0 112.8 2.8l-.1.1a1.7 1.7 0 00-.3 1.8V9a1.7 1.7 0 001.5 1H21a2 2 0 110 4h-.1a1.7 1.7 0 00-1.5 1z"/>'],
   ];
   const links = nav.map(([k, label, icon]) =>
@@ -259,12 +260,11 @@ function signInView() {
   </div>`;
 }
 
-// ---- Strategy
+// ---- Status: who's going, or where a game is in selling
 
-// How a game is assigned, as one choice: both partners, one partner + a guest, sell, or undecided.
 function assignment(g) {
   if (g.soldPrice != null) return 'sold';
-  if (g.plan === 'sell') return g.platform === FRIEND ? 'friend' : 'sell';
+  if (g.plan === 'sell') return g.platform === FRIEND ? 'friend' : g.listPrice != null ? 'listed' : 'sell';
   if (g.plan === 'undecided') return 'undecided';
   const h = holders(g);
   if (h.includes(P1) && h.includes(P2)) return 'both';
@@ -272,21 +272,30 @@ function assignment(g) {
   if (h.includes(P2)) return 'p2';
   return 'custom';
 }
-const ASSIGN = [['both', `${P1} & ${P2}`], ['p1', `${P1} + guest`], ['p2', `${P2} + guest`], ['sell', 'Sell'], ['friend', 'Sell to a friend'], ['undecided', 'Undecided']];
+const ASSIGN = [['undecided', 'Undecided'], ['both', `${P1} & ${P2}`], ['p1', `${P1} + guest`], ['p2', `${P2} + guest`], ['sell', 'To sell'], ['listed', 'On Ticketmaster'], ['friend', 'Sell to a friend'], ['sold', 'Sold…']];
+// The Ticketmaster account is Andrew's, so Ticketmaster payouts land with him.
+const TM_PAYEE = P2;
 
+// The Status dropdown; "On Ticketmaster" gets the list price box next to it.
 function assignSelect(g) {
   const cur = assignment(g);
-  if (cur === 'sold') return `<span class="chip chip-sold">Sold ${money(g.soldPrice)}</span>`;
   const opts = (cur === 'custom' ? [['custom', 'Guests only'], ...ASSIGN] : ASSIGN)
-    .map(([k, l]) => `<option value="${k}" ${k === cur ? 'selected' : ''}>${esc(l)}</option>`).join('');
-  return `<select class="cell-select a-${cur}" data-gid="${g.id}" data-assign aria-label="Who's going">${opts}</select>`;
+    .map(([k, l]) => `<option value="${k}" ${k === cur ? 'selected' : ''}>${esc(k === 'sold' && cur === 'sold' ? 'Sold' : l)}</option>`).join('');
+  const sel = `<select class="cell-select a-${cur}" data-gid="${g.id}" data-assign aria-label="Status">${opts}</select>`;
+  return cur === 'listed' ? `<span class="status-cell">${sel}${moneyIn(g, 'listPrice', g.listPrice, '—', 'set', 'Ticketmaster list price')}</span>` : sel;
 }
 
+// Who got a sale's payout: one tap on a name.
+const payeeSeg = g => `<span class="seg tiny" role="group" aria-label="Paid out to">${CONFIG.PARTNERS.map(p => `<button class="${g.paidTo === p ? 'on' : ''}" data-act="paidto:${g.id}|${esc(p)}">${esc(p)}</button>`).join('')}</span>`;
+const autoPayout = g => netPayout(g.soldPrice, g.qtySold || seatCount(), feePct(state.settings, g.platform));
+const payoutIn = g => moneyIn(g, 'payout', g.payout, Math.round(autoPayout(g) * 100) / 100, `wide ${g.payout != null ? 'set' : ''}`, 'Payout amount');
+const tmResales = () => state.games.filter(g => g.platform === 'Ticketmaster' && (g.listPrice != null || g.soldPrice != null)).length;
+
 const gameCell = g => `<button class="game-cell" data-open="${g.id}">${logo(g, 22)}<b>${team(g.opp).abbr}</b><span><i class="wd">${fmtDate(g, { weekday: 'short' })} </i>${fmtDate(g, { month: 'numeric', day: 'numeric' })}</span></button>`;
-const stratGames = () => state.games.filter(g => state.showPast || !isPast(g));
+const sellGames = () => state.games.filter(g => state.showPast || !isPast(g));
 const goingWith = name => g => g.plan === 'use' && holders(g).includes(name);
 const selling = g => g.plan === 'sell' || g.soldPrice != null;
-const STRAT_TABS = [
+const SELL_TABS = [
   ['all', 'All games', () => true],
   ['selling', 'Selling', selling],
   ['both', 'Both going', g => goingWith(P1)(g) && goingWith(P2)(g)],
@@ -301,7 +310,6 @@ const outLabel = h => {
   const d = Math.floor(h / 24);
   return d < 14 ? `${d}d ${Math.round(h - d * 24)}h` : `${d}d`;
 };
-const shortWhen = (g, d) => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + (d - startTime(g) > -5 * 86400e3 ? ' ' + d.toLocaleTimeString('en-US', { hour: 'numeric' }).replace(' ', '').toLowerCase() : '');
 const dayLabel = d => d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
 const rangeLabel = (a, b) => `${a.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} – ${b.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
 
@@ -326,7 +334,7 @@ function compCell(g) {
   return g.compSearch ? `<a class="comp-find" href="${esc(g.compSearch)}" target="_blank" rel="noopener" title="No comp checked yet — open this game on Vivid Seats">find ↗</a>` : '<span class="muted">—</span>';
 }
 
-// Interleave tranche bands, decision-deadline flags and a "today" line with the game rows, by date.
+// Interleave tranche bands and a "today" line with the game rows, by date.
 function withMarkers(rows, cols, renderRow) {
   const T = tranches(state.settings, state.games), now = new Date();
   const items = rows.map(g => ({ t: startTime(g).getTime(), html: renderRow(g, trancheOf(T, g)) }));
@@ -337,189 +345,39 @@ function withMarkers(rows, cols, renderRow) {
     const undecided = tr.games.filter(g => g.plan === 'undecided').length;
     const done = tr.decideBy < now;
     items.push({ t: startTime(vis[0]).getTime() - 1, html: `<tr class="mk band t${tr.n}"><td colspan="${cols}"><div class="mk-line"><span class="mk-flag">Tranche ${tr.n} · ${rangeLabel(tr.first, tr.last)} · ${tr.games.length} games · ${toSell} to sell${undecided ? ` · ${undecided} undecided` : ''} · ${done ? 'decided' : 'decide by ' + dayLabel(tr.decideBy)}</span></div></td></tr>` });
-    const span = [startTime(rows[0]).getTime(), startTime(rows[rows.length - 1]).getTime()];
-    if (!done && tr.decideBy.getTime() > span[0] && tr.decideBy.getTime() < span[1]) {
-      const days = Math.ceil((tr.decideBy - now) / 86400e3);
-      items.push({ t: tr.decideBy.getTime(), html: `<tr class="mk deadline t${tr.n}"><td colspan="${cols}"><div class="mk-line"><span class="mk-flag">⚑ ${dayLabel(tr.decideBy)} · Decide tranche ${tr.n} (${rangeLabel(tr.first, tr.last)}): who's going, what to sell · in ${days} days</span></div></td></tr>` });
-    }
   }
   if (state.showPast && rows.some(g => isPast(g)) && rows.some(g => !isPast(g))) items.push({ t: now.getTime(), html: `<tr class="mk today"><td colspan="${cols}"><div class="mk-line"><span class="mk-flag">Today · ${dayLabel(now)}</span></div></td></tr>` });
   return items.sort((a, b) => a.t - b.t).map(i => i.html).join('');
 }
 
-function strategyView() {
-  const games = stratGames();
-  const tabs = STRAT_TABS.filter(([k, , f]) => k !== 'undecided' || games.some(f));
-  if (!tabs.find(t => t[0] === state.stratTab)) state.stratTab = 'all';
-  const [, , filter] = tabs.find(t => t[0] === state.stratTab);
-  const rows = games.filter(filter);
-  const body = state.stratTab === 'all' ? allTable(rows) : state.stratTab === 'selling' ? sellingTable(rows) : goingTable(rows, state.stratTab);
-  return `
-  <div class="view-head"><h1>Strategy</h1>
-    <label class="toggle small"><input type="checkbox" data-act-check="showpast" ${state.showPast ? 'checked' : ''}><span>Show past games</span></label>
-  </div>
-  <div class="tabs" role="tablist">${tabs.map(([k, l, f]) => `<button role="tab" class="${state.stratTab === k ? 'on' : ''}" aria-selected="${state.stratTab === k}" data-act="strat:${k}">${esc(l)} <span class="count">${games.filter(f).length}</span></button>`).join('')}</div>
-  ${body}`;
-}
+const clearSale = g => Object.assign(g, { soldPrice: null, qtySold: null, payout: null, soldOn: '', buyer: '', transferred: false, paid: false, paidTo: '' });
 
-function trancheStrip() {
-  const T = tranches(state.settings, state.games), now = new Date();
-  return T.map(tr => {
-    const toSell = tr.games.filter(g => g.plan === 'sell' && g.soldPrice == null).length;
-    return `<span class="t-chip t${tr.n}"><b>T${tr.n}</b> ${rangeLabel(tr.first, tr.last)} · ${toSell} to sell · ${tr.decideBy < now ? 'decided' : 'decide by ' + tr.decideBy.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>`;
-  }).join('');
-}
-
-function listedCell(g, L) {
-  if (g.platform === FRIEND) return `<span class="act friend">friend</span>`;
-  const listed = g.listPrice;
-  const off = listed != null && L.now.value != null && listed !== L.now.value;
-  const action = listed == null ? `<span class="act list">List ${money(L.now.value)}</span>` : off ? `<span class="act move">${listed > L.now.value ? '↓' : '↑'} ${money(L.now.value)}</span>` : '<span class="act ok">✓</span>';
-  return `<div class="listed">${moneyIn(g, 'listPrice', listed, '—', '', 'Listed price')}${action}</div>`;
-}
-
-function allTable(rows) {
-  const S = state.settings, floor = floorPrice(S, state.games), n = seatCount();
-  const names = [...new Set(state.games.flatMap(holders).filter(x => x !== P1 && x !== P2))];
-  const cols = 9;
-  const head = `<tr><th class="sticky">Game</th><th>Out</th><th>Plan</th>${Array.from({ length: n }, (_, i) => `<th>Seat ${i + 1}</th>`).join('')}<th class="r" title="Cheapest similar pair on Vivid Seats, fees included — click to open it">Comp<br><small>with fees</small></th><th class="r">Price now<br><small>list on TM</small></th><th class="r">Listed<br><small>on TM</small></th><th>Note</th></tr>`;
-  const row = (g, tr) => {
-    const L = ladder(g, state.prices, state.mult, S, floor), h = hoursUntil(g), sell = selling(g);
-    const seats = Array.from({ length: n }, (_, i) => g.plan === 'use'
-      ? `<td><input class="cell-in name ${g.seats[i] === P1 ? 'p1' : g.seats[i] === P2 ? 'p2' : g.seats[i] ? 'guest' : ''}" list="strat-names" data-gid="${g.id}" data-seat="${i}" value="${esc(g.seats[i] || '')}" placeholder="empty" aria-label="Seat ${i + 1}"></td>`
-      : '<td class="muted">—</td>').join('');
-    const priceNow = g.soldPrice != null ? `<b>${money(g.soldPrice)}</b> <small class="muted">sold</small>` : sell ? `<b>${money(L.now.value)}</b> <small class="muted">${L.now.short}</small>` : `<span class="muted" title="What these seats would list for today">${money(L.now.value)}</span>`;
-    return `<tr class="${windowOf(g)} ${isPast(g) ? 'past-row' : ''}">
-      <td class="sticky">${gameCell(g)}</td>
-      <td class="nowrap ${h < 120 && h > 0 ? 'warn-t' : ''}">${isPast(g) ? 'Final' : outLabel(h)}</td>
-      <td>${assignSelect(g)}</td>
-      ${seats}
-      <td class="r nowrap">${compCell(g)}</td>
-      <td class="r nowrap">${priceNow}</td>
-      <td class="r">${sell && g.soldPrice == null ? listedCell(g, L) : '<span class="muted">—</span>'}</td>
-      <td><input class="cell-in note" data-gid="${g.id}" data-k="note" value="${esc(g.note)}" placeholder="—" aria-label="Note"></td>
-    </tr>`;
-  };
-  const going = rows.filter(g => g.plan === 'use').length, toSell = rows.filter(g => g.plan === 'sell' && g.soldPrice == null).length, und = rows.filter(g => g.plan === 'undecided').length;
-  return `
-  <div class="strip">
-    <span><b>${rows.length}</b> games</span><span><b>${going}</b> going</span><span><b>${toSell}</b> to sell</span>${und ? `<span class="warn-t"><b>${und}</b> undecided</span>` : ''}
-    <span><b>${rows.filter(g => g.comp != null).length}</b> with comps</span>
-  </div>
-  <div class="t-strip">${trancheStrip()}</div>
-  <datalist id="strat-names">${[P1, P2, ...names].map(x => `<option value="${esc(x)}">`).join('')}</datalist>
-  <div class="sheet-wrap"><table class="sheet">
-    <thead>${head}</thead>
-    <tbody>${rows.length ? withMarkers(rows, cols + n - 2, row) : `<tr><td colspan="${cols}" class="muted pad">No games.</td></tr>`}</tbody>
-  </table></div>
-  <p class="muted small legend-p">Change <b>Plan</b> to move a game between tabs. <b>Comp</b> links to the listing it came from. "Price now" is today's step on the price ladder for games we're selling, and what the seats would list for if we sold them. The colored bands are selling tranches; the ⚑ lines are the dates we decide each tranche.</p>`;
-}
-
-function sellingTable(rows) {
-  const S = state.settings;
-  const floor = floorPrice(S, state.games);
-  const n = seatCount();
-  const fee = feePct(S, 'Ticketmaster');
-  const open = rows.filter(g => g.soldPrice == null), sold = rows.filter(g => g.soldPrice != null);
-  const L = new Map(open.map(g => [g, ladder(g, state.prices, state.mult, S, floor)]));
-  const cap = Number(S.resaleCap) || 0, planned = resalesPlanned();
-  const potential = [...L.values()].reduce((a, l) => a + (l.now.value || 0), 0) * n * (1 - fee / 100);
-  const needUpdate = open.filter(g => g.platform !== FRIEND && g.listPrice != null && L.get(g).now.value != null && g.listPrice !== L.get(g).now.value).length;
-  const notListed = open.filter(g => g.platform !== FRIEND && g.listPrice == null).length;
-  const cols = 10;
-  const head = `<tr><th class="sticky">Game</th><th>Out</th><th class="r" title="Cheapest similar pair on Vivid Seats, fees included — click to open it">Comp<br><small>with fees</small></th>
-    ${STEPS.map(st => `<th class="r">${st.label}<br><small>${st.key === 'pStretch' ? '>2 wk' : st.key === 'p2wk' ? '2 wk–5 d' : st.key === 'p5d' ? '5 d–48 h' : 'last 48 h'}</small></th>`).join('')}
-    <th>Next drop</th><th class="r">Listed<br><small>on TM</small></th><th>Plan</th></tr>`;
-  const row = (g, tr) => {
-    const l = L.get(g), h = l.hours;
-    return `<tr class="${windowOf(g)}">
-      <td class="sticky">${gameCell(g)}</td>
-      <td class="nowrap ${h < 120 ? 'warn-t' : ''}">${outLabel(h)}</td>
-      <td class="r nowrap">${compCell(g)}</td>
-      ${l.steps.map((st, i) => `<td class="r step ${i === l.current ? 'now' : i < l.current ? 'done' : ''}">${moneyIn(g, st.key, st.overridden ? st.value : '', st.auto, st.overridden ? 'set' : '', st.label + ' price')}</td>`).join('')}
-      <td class="nowrap small">${l.nextAt ? `${money(l.next.value)} <span class="muted">${shortWhen(g, l.nextAt)}</span>` : '<span class="muted">last step</span>'}</td>
-      <td class="r">${listedCell(g, l)}</td>
-      <td>${assignSelect(g)}</td>
-    </tr>`;
-  };
-  const soldRow = g => {
-    const qty = g.qtySold || n;
-    return `<tr class="sold-row"><td class="sticky">${gameCell(g)}</td>
-      <td colspan="${cols - 2}" class="muted">Sold ${qty} on ${esc(g.platform || '—')} for ${money(g.soldPrice)} each${g.soldOn ? ' · ' + esc(g.soldOn) : ''} · we got ${money(g.payout ?? netPayout(g.soldPrice, qty, feePct(S, g.platform)))} · ${g.transferred ? 'transferred' : '<b class="bad">not transferred</b>'} · ${g.paid ? 'paid' : 'payout pending'}</td>
-      <td>${assignSelect(g)}</td></tr>`;
-  };
-  return `
-  <div class="strip">
-    <span><b>${open.length}</b> to sell</span>
-    <span><b>${sold.length}</b> sold</span>
-    <span class="${cap && planned > cap ? 'bad' : ''}"><b>${planned}</b> / ${cap || '—'} resale cap</span>
-    <span><b>${money(potential)}</b> to us if all sell at today's step</span>
-    ${needUpdate ? `<span class="warn-t"><b>${needUpdate}</b> listing${needUpdate > 1 ? 's' : ''} to reprice</span>` : ''}
-    ${notListed ? `<span><b>${notListed}</b> not listed yet</span>` : ''}
-    <span class="muted">${floor ? `Floor ${money(floor)}/ticket (your cost)` : '<a href="#/settings">Add season cost</a> to set a price floor'}</span>
-  </div>
-  <div class="t-strip">${trancheStrip()}</div>
-  <div class="sheet-wrap"><table class="sheet">
-    <thead>${head}</thead>
-    <tbody>${open.length ? withMarkers(open, cols, row) : `<tr><td colspan="${cols}" class="muted pad">Nothing marked to sell.</td></tr>`}
-    ${sold.length ? `<tr class="group"><td colspan="${cols}">Sold</td></tr>${sold.map(soldRow).join('')}` : ''}</tbody>
-  </table></div>
-  <p class="muted small legend-p">Prices are what you type into Ticketmaster (we keep ${100 - fee}%). Grey numbers come from the 2-week price, which is the comp ÷ ${(1 + (Number(S.tmBuyerFee) || 0) / 100).toFixed(2)} for Ticketmaster's buyer fees. Stretch is 15% above it, 5-day 15% below, 48-hour 30% below${floor ? ', never under your floor' : ''}. Type into any cell to override it; clear it to go back to automatic. The highlighted column is the price in effect right now. <b>Comp</b> is the cheapest pair in rows 1–3 of sections 201–203 and 223–224 on Vivid Seats, fees included; click it to open that listing. Games with "find ↗" don't have a comp yet, so their price is estimated from the arena's cheapest ticket × ${state.mult.value.toFixed(2)} (${esc(state.mult.basis)}).</p>`;
-}
-
-function goingTable(rows, tab) {
-  const n = seatCount();
-  const names = [...new Set(state.games.flatMap(holders).filter(x => x !== P1 && x !== P2))];
-  const value = g => g.comp ?? estimate({ ...g, soldPrice: null }, state.prices, state.mult).value;
-  const total = rows.reduce((a, g) => a + (value(g) || 0), 0);
-  const who = tab === 'p1' ? P1 : tab === 'p2' ? P2 : null;
-  const cols = 6 + n;
-  const head = `<tr><th class="sticky">Game</th><th>Time</th><th>Out</th>${Array.from({ length: n }, (_, i) => `<th>Seat ${i + 1}</th>`).join('')}<th class="r" title="What a similar pair sells for, each, fees included — click to open it">Comp<br><small>each, with fees</small></th><th>Plan</th><th>Note</th></tr>`;
-  const row = (g, tr) => {
-    const h = hoursUntil(g);
-    return `<tr class="${windowOf(g)}">
-      <td class="sticky">${gameCell(g)}</td>
-      <td class="nowrap muted">${esc(g.time)}</td>
-      <td class="nowrap">${isPast(g) ? 'Final' : outLabel(h)}</td>
-      ${Array.from({ length: n }, (_, i) => `<td><input class="cell-in name ${g.seats[i] === P1 ? 'p1' : g.seats[i] === P2 ? 'p2' : g.seats[i] ? 'guest' : ''}" list="strat-names" data-gid="${g.id}" data-seat="${i}" value="${esc(g.seats[i] || '')}" placeholder="empty" aria-label="Seat ${i + 1}"></td>`).join('')}
-      <td class="r nowrap">${g.comp != null ? compCell(g) : `<span class="muted" title="Estimated — no comp checked yet">est. ${money(value(g))}</span> ${compCell(g)}`}</td>
-      <td>${assignSelect(g)}</td>
-      <td><input class="cell-in note" data-gid="${g.id}" data-k="note" value="${esc(g.note)}" placeholder="—" aria-label="Note"></td>
-    </tr>`;
-  };
-  const empty = rows.filter(g => holders(g).length < n).length;
-  return `
-  <div class="strip">
-    <span><b>${rows.length}</b> games${who ? ` for ${esc(who)}` : ''}</span>
-    <span><b>${money(total * (who ? 1 : n))}</b> ${who ? `of ticket value for ${esc(who)}` : 'of ticket value'}</span>
-    ${empty ? `<span class="warn-t"><b>${empty}</b> with an empty seat</span>` : ''}
-  </div>
-  <datalist id="strat-names">${[P1, P2, ...names].map(x => `<option value="${esc(x)}">`).join('')}</datalist>
-  <div class="sheet-wrap"><table class="sheet">
-    <thead>${head}</thead>
-    <tbody>${rows.length ? withMarkers(rows, cols, row) : `<tr><td colspan="${cols}" class="muted pad">No games here yet.</td></tr>`}</tbody>
-  </table></div>
-  <p class="muted small legend-p">Change the Plan dropdown to move a game between tabs. Type a guest's name into a seat. Click a game for the full details.</p>`;
-}
-
-// Apply a Plan dropdown choice.
+// Apply a Status dropdown choice. Returns false when nothing changed.
 function assign(g, choice) {
+  if (choice === 'sold') { openSale(g); renderModal(); return false; }  // nothing changes until the sale is saved
+  if (g.soldPrice != null) {
+    if (!confirm(`Undo the ${team(g.opp).abbr} ${fmtDate(g, { month: 'numeric', day: 'numeric' })} sale?`)) { render(); return false; }
+    clearSale(g);
+  }
   const guest = holders(g).find(x => x !== P1 && x !== P2) || 'Guest';
+  const today = new Date().toLocaleDateString('en-CA');
   if (choice === 'both') Object.assign(g, { plan: 'use', seats: [P1, P2] });
   else if (choice === 'p1') Object.assign(g, { plan: 'use', seats: [P1, guest] });
   else if (choice === 'p2') Object.assign(g, { plan: 'use', seats: [P2, guest] });
-  else if (choice === 'sell') Object.assign(g, { plan: 'sell', platform: g.platform && g.platform !== FRIEND ? g.platform : state.settings.defaultPlatform || 'Ticketmaster' });
-  else if (choice === 'friend') Object.assign(g, { plan: 'sell', platform: FRIEND });
+  else if (choice === 'sell') Object.assign(g, { plan: 'sell', platform: g.platform && g.platform !== FRIEND ? g.platform : state.settings.defaultPlatform || 'Ticketmaster', listPrice: null, listedOn: '' });
+  else if (choice === 'listed') Object.assign(g, { plan: 'sell', platform: 'Ticketmaster', listPrice: g.listPrice ?? pitchPrices(g, null, 0).tm, listedOn: g.listedOn || today });
+  else if (choice === 'friend') Object.assign(g, { plan: 'sell', platform: FRIEND, listPrice: null, listedOn: '' });
   else if (choice === 'undecided') g.plan = 'undecided';
   if (choice === 'both' || choice === 'p1') g.interest[P1] = true;
   if (choice === 'both' || choice === 'p2') g.interest[P2] = true;
+  return true;
 }
 
-// Re-render while keeping focus on the same cell, so tabbing through the sheet works.
-function renderKeepFocus() {
+// Re-render while keeping focus on the same cell (or the one asked for), so tabbing through the sheet works.
+function renderKeepFocus(focus) {
   setTimeout(() => {
     const a = document.activeElement;
-    const key = a?.dataset?.gid ? `[data-gid="${a.dataset.gid}"]${a.dataset.k ? `[data-k="${a.dataset.k}"]` : a.dataset.seat != null ? `[data-seat="${a.dataset.seat}"]` : '[data-assign]'}` : null;
+    const key = focus || (a?.dataset?.gid ? `[data-gid="${a.dataset.gid}"]${a.dataset.k ? `[data-k="${a.dataset.k}"]` : a.dataset.seat != null ? `[data-seat="${a.dataset.seat}"]` : '[data-assign]'}` : null);
     const y = window.scrollY, sx = $('.sheet-wrap')?.scrollLeft || 0;
     render();
     window.scrollTo(0, y);
@@ -529,16 +387,20 @@ function renderKeepFocus() {
   }, 0);
 }
 
-// One-time import of what we learned from Ticketmaster Account Manager on Oct 20, 2026.
 async function migrate() {
   const S = state.settings;
+  if (Number(S.settingsVersion) < 3) await migrateV3(S);
+  if (Number(S.settingsVersion) === 3 && !DEMO) await migrateV4(S);
+}
+
+// One-time import of what we learned from Ticketmaster Account Manager on Oct 20, 2026.
+async function migrateV3(S) {
   if (Number(S.settingsVersion) === 2) {
     // Oct 20 decisions: assume a 10-game Ticketmaster cap until confirmed; Tranche 1 locked by Nov 1.
     Object.assign(S, { resaleCap: 10, settingsVersion: 3 });
     try { await store.saveSettings(S); } catch (e) { console.warn('migrate v3', e); }
     return;
   }
-  if (Number(S.settingsVersion) >= 3) return;
   Object.assign(S, { section: S.section || '201', row: S.row || '2', seats: S.seats || '3-4', feeTicketmaster: 10, defaultPlatform: 'Ticketmaster', tmBuyerFee: S.tmBuyerFee || 20, resaleCap: 10, settingsVersion: 3 });
   const known = { '10/22/2026': [500, 444], '10/25/2026': [254, 199], '10/30/2026': [650, 375] };
   const changed = [];
@@ -556,7 +418,34 @@ async function migrate() {
   setSeatCount(S.seatCount);
 }
 
-// ---- Sell: pick a game, get a ready-to-send pitch
+// Ticketmaster Account Manager on Oct 21, 2026: nine active listings and the Knicks sale (payout due Oct 23).
+// Phil sold the Cavs pair himself the same day. Listings no longer on Ticketmaster go back to "To sell".
+const TM_OCT21 = {
+  listed: { '2026-10-25': 199, '2026-11-02': 299, '2026-11-12': 250, '2026-11-15': 299, '2026-12-12': 299, '2026-12-23': 399, '2027-02-07': 499, '2027-03-03': 399, '2027-03-31': 499 },
+  sold: {
+    '2026-10-30': { soldPrice: 333, qtySold: 2, platform: 'Ticketmaster', listPrice: 333, payout: 599.4, paidTo: P2, soldOn: '2026-10-21', transferred: true, paid: false },
+    '2026-10-22': { soldPrice: 200, qtySold: 2, platform: FRIEND, listPrice: null, payout: 400, paidTo: P1, soldOn: '2026-10-21', transferred: true, paid: true },
+  },
+};
+async function migrateV4(S) {
+  const changed = [];
+  for (const g of state.games) {
+    const sale = TM_OCT21.sold[g.id], list = TM_OCT21.listed[g.id];
+    if (g.soldPrice != null) continue;
+    if (sale) Object.assign(g, { plan: 'sell', ...sale });
+    else if (list != null) Object.assign(g, { plan: 'sell', platform: 'Ticketmaster', listPrice: list, listedOn: g.listedOn || '2026-10-21' });
+    else if (g.platform === 'Ticketmaster' && g.listPrice != null) Object.assign(g, { listPrice: null, listedOn: '' });
+    else continue;
+    changed.push(g);
+  }
+  S.settingsVersion = 4;
+  try {
+    await store.saveSettings(S);
+    for (const g of changed) await store.saveGame(g, state.user.name);
+  } catch (e) { console.warn('migrate v4', e); }
+}
+
+// ---- Sell: every game's status and price, a pitch for each, and sold lines with their payouts
 
 const hookFor = g => g.hook || state.hooks?.games?.[g.id]?.hook || defaultHook(g);
 const winChip = g => { const w = windowOf(g); return `<span class="win ${w}" title="${WINDOW_LABEL[w]}">${isPast(g) ? 'Final' : outLabel(hoursUntil(g))}</span>`; };
@@ -570,40 +459,68 @@ function pitchPrices(g, stepIdx, pct) {
 }
 
 function sellView() {
-  const all = state.sellFilter === 'all';
-  const rows = state.games.filter(g => !isPast(g) && (all || ((g.plan === 'sell' || g.plan === 'undecided') && g.soldPrice == null)));
-  const pct = Number(state.settings.ffDiscount) || 20;
-  const cols = 8;
+  const games = sellGames(), S = state.settings;
+  const tabs = SELL_TABS.filter(([k, , f]) => k !== 'undecided' || games.some(f));
+  if (!tabs.find(t => t[0] === state.sellTab)) state.sellTab = 'all';
+  const rows = games.filter(tabs.find(t => t[0] === state.sellTab)[2]);
+  const pct = Number(S.ffDiscount) || 20;
+  const cols = 9;
   const row = g => {
-    const p = pitchPrices(g, null, pct), sold = g.soldPrice != null;
-    return `<tr class="${windowOf(g)}">
+    const st = assignment(g);
+    if (st === 'sold') return soldLine(g);
+    const p = pitchPrices(g, null, pct), forSale = st === 'sell' || st === 'listed' || st === 'friend';
+    return `<tr class="${windowOf(g)} ${isPast(g) ? 'past-row' : ''}">
       <td class="sticky">${gameCell(g)}</td>
       <td class="nowrap">${winChip(g)}</td>
-      <td class="hook-cell">${esc(hookFor(g))}</td>
       <td>${assignSelect(g)}</td>
-      <td class="r nowrap"><b>${money(p.friend)}</b> <small class="muted">${p.L.now.short}</small></td>
+      <td class="r nowrap">${compCell(g)}</td>
+      <td class="r nowrap">${forSale ? `<b>${money(p.tm)}</b> <small class="muted">${p.L.now.short}</small>` : `<span class="muted" title="What these seats would list for today">${money(p.tm)}</span>`}</td>
+      <td class="r nowrap"><b>${money(p.friend)}</b></td>
       <td class="r nowrap">${money(p.ff)}</td>
-      <td class="nowrap">${sold ? (saleDone(g) ? '<span class="chip chip-sold">Sold</span>' : '<span class="chip chip-listed">Sale pending</span>') : g.listPrice != null ? `<span class="chip chip-listed">On TM ${money(g.listPrice)}</span>` : ''}</td>
-      <td class="r"><button class="btn small" data-act="pitch:${g.id}">Pitch</button></td>
+      <td class="hook-cell">${esc(hookFor(g))}</td>
+      <td class="r">${isPast(g) ? '' : `<button class="btn small" data-act="pitch:${g.id}">Pitch</button>`}</td>
     </tr>`;
   };
-  const head = `<tr><th class="sticky">Game</th><th>Out</th><th>Hook</th><th>Plan</th><th class="r" title="What similar seats cost online, fees included">Friend price<br><small>each, today</small></th><th class="r">F&amp;F<br><small>${pct}% off</small></th><th>Status</th><th></th></tr>`;
+  const head = `<tr><th class="sticky">Game</th><th>Out</th><th>Status</th><th class="r" title="Cheapest similar pair on Vivid Seats, fees included — click to open it">Comp<br><small>with fees</small></th><th class="r" title="Today's step on the price ladder — what to list at on Ticketmaster">TM now<br><small>ladder</small></th><th class="r" title="What similar seats cost online, fees included">Friend<br><small>each, today</small></th><th class="r">F&amp;F<br><small>${pct}% off</small></th><th>Hook</th><th></th></tr>`;
+  const going = games.filter(g => g.plan === 'use' && g.soldPrice == null).length;
+  const toSell = games.filter(g => g.plan === 'sell' && g.soldPrice == null).length;
+  const sold = games.filter(g => g.soldPrice != null).length, und = games.filter(g => g.plan === 'undecided' && g.soldPrice == null).length;
+  const cap = Number(S.resaleCap) || 0, onTM = tmResales();
   return `
   <div class="view-head"><h1>Sell</h1>
-    <div class="seg small">${[['sell', 'To sell'], ['all', 'All upcoming']].map(([k, l]) => `<button class="${(state.sellFilter || 'sell') === k ? 'on' : ''}" data-act="sellf:${k}">${l}</button>`).join('')}</div>
+    <label class="toggle small"><input type="checkbox" data-act-check="showpast" ${state.showPast ? 'checked' : ''}><span>Show past games</span></label>
   </div>
   ${thermos(true)}
+  <div class="tabs" role="tablist">${tabs.map(([k, l, f]) => `<button role="tab" class="${state.sellTab === k ? 'on' : ''}" aria-selected="${state.sellTab === k}" data-act="tab:${k}">${esc(l)} <span class="count">${games.filter(f).length}</span></button>`).join('')}</div>
+  <div class="strip">
+    <span><b>${going}</b> going</span><span><b>${toSell}</b> to sell</span><span><b>${sold}</b> sold</span>${und ? `<span class="warn-t"><b>${und}</b> undecided</span>` : ''}
+    <span class="${cap && onTM > cap ? 'bad' : cap && onTM === cap ? 'warn-t' : ''}" title="Games listed or sold on Ticketmaster, against its resale limit (we're assuming ${cap || '—'})"><b>${onTM}</b> of ${cap || '—'} Ticketmaster resales used</span>
+  </div>
   <div class="win-legend">${['far', 'w14', 'w5', 'w2'].map(w => `<span><i class="win-dot ${w}"></i>${WINDOW_LABEL[w]}</span>`).join('')}</div>
   <div class="sheet-wrap"><table class="sheet sell-sheet">
     <thead>${head}</thead>
-    <tbody>${rows.length ? withMarkers(rows, cols, row) : `<tr><td colspan="${cols}" class="muted pad">Nothing to sell right now.</td></tr>`}</tbody>
+    <tbody>${rows.length ? withMarkers(rows, cols, row) : `<tr><td colspan="${cols}" class="muted pad">No games here yet.</td></tr>`}</tbody>
   </table></div>
-  <p class="muted small legend-p">Pick a game and hit <b>Pitch</b> to get a text, email or board post with today's price filled in. Friend price is what similar seats cost online with fees included; F&amp;F takes ${pct}% off (rounded down to $5). One game per person, and the ask is a simple yes or no.</p>`;
+  <p class="muted small legend-p"><b>Status</b> is who's going, or where a game is in selling. <b>On Ticketmaster</b> shows the price it's listed at; type over it when you change the listing. <b>Sold…</b> logs a sale, and the line then shows who got the payout and how much (blank = automatic, after the ${feePct(S, 'Ticketmaster')}% Ticketmaster fee). <b>TM now</b> is today's step on the price ladder; click a game to see or change all four steps and who's in the seats. <b>Friend</b> is what similar seats cost online with fees included; F&amp;F takes ${pct}% off. <b>Comp</b> links to the listing it came from. The colored bands are selling tranches.</p>`;
 }
 
-// Our seat-view photo (seat-view.jpg, Phil's photo from the seats). Loaded when a pitch opens so Share / Copy can use it inside the tap,
-// which iOS requires. Safari's clipboard only takes PNG, so we keep a PNG copy too.
-const PHOTO = () => state.settings.seatPhoto || 'seat-view.jpg';
+// A sold line: what it went for, who got the payout and how much, and whether it's all done.
+function soldLine(g) {
+  const qty = g.qtySold || seatCount();
+  return `<tr class="sold-line ${saleDone(g) ? 'done' : ''} ${isPast(g) ? 'past-row' : ''}">
+    <td class="sticky">${gameCell(g)}</td>
+    <td class="nowrap">${winChip(g)}</td>
+    <td>${assignSelect(g)}</td>
+    <td colspan="5"><div class="sold-info">
+      <span class="nowrap"><b>${qty} @ ${money(g.soldPrice)}</b> <span class="muted">${g.platform === FRIEND ? 'to a friend' : 'on ' + esc(g.platform || '—')}${g.buyer ? ' · ' + esc(g.buyer) : ''}</span></span>
+      <span class="nowrap"><span class="muted small">Paid out to</span> ${payeeSeg(g)} ${payoutIn(g)}</span>
+      <label class="mini"><input type="checkbox" data-gid="${g.id}" data-flag="paid" ${g.paid ? 'checked' : ''}>money in</label>
+      <label class="mini"><input type="checkbox" data-gid="${g.id}" data-flag="transferred" ${g.transferred ? 'checked' : ''}>transferred</label>
+    </div></td>
+    <td class="r"><button class="link small" data-act="saleedit:${g.id}">Edit</button></td>
+  </tr>`;
+}
+
 async function loadViewFile() {
   if (state.viewFile) return;
   try {
@@ -682,12 +599,14 @@ function saleModal() {
         <label class="field"><span>Price each</span><span class="money-in big"><span class="cur">$</span><input data-sf="price" type="number" inputmode="decimal" value="${F.price ?? ''}"></span></label>
         <label class="field"><span>Where</span><select data-sf="platform">${PLATFORMS.map(p => `<option ${F.platform === p ? 'selected' : ''}>${p}</option>`).join('')}</select></label>
         <label class="field"><span>Date</span><input data-sf="soldOn" type="date" value="${esc(F.soldOn)}"></label>
+        <label class="field"><span>Paid out to</span><select data-sf="paidTo"><option value="">—</option>${CONFIG.PARTNERS.map(p => `<option ${F.paidTo === p ? 'selected' : ''}>${esc(p)}</option>`).join('')}</select></label>
+        <label class="field"><span>Payout</span><span class="money-in big"><span class="cur">$</span><input data-sf="payout" type="number" inputmode="decimal" step="0.01" value="${F.payout ?? ''}" placeholder="auto"></span></label>
       </div>
       <div class="interest">
         <label class="toggle"><input type="checkbox" data-sf="paid" ${F.paid ? 'checked' : ''}><span>Money received</span></label>
         <label class="toggle"><input type="checkbox" data-sf="transferred" ${F.transferred ? 'checked' : ''}><span>Tickets transferred</span></label>
       </div>
-      <p class="muted small">It counts toward the $${Number(state.settings.revenueTarget || 8000).toLocaleString()} once both boxes are checked. Whoever sold it does the transfer.</p>
+      <p class="muted small">Payout is what actually landed with that person; leave it blank to use the price × tickets minus the platform's fee. It counts toward the $${Number(state.settings.revenueTarget || 8000).toLocaleString()} once both boxes are checked. Whoever sold it does the transfer.</p>
       <div class="list-actions"><button class="btn" data-act="ssave">Save sale</button></div>
     </div>
   </div>`;
@@ -696,7 +615,15 @@ function saleModal() {
 function openSale(g, extra = {}) {
   const pct = Number(state.settings.ffDiscount) || 20;
   const p = pitchPrices(g, null, pct);
-  state.saleForm = { id: g.id, buyer: g.buyer || '', qty: g.qtySold || 2, price: g.soldPrice ?? p.friend, platform: g.platform && g.platform !== 'Ticketmaster' ? g.platform : FRIEND, soldOn: g.soldOn || new Date().toLocaleDateString('en-CA'), paid: !!g.paid, transferred: !!g.transferred, ...extra };
+  // A game listed on Ticketmaster most likely sold there: its price, Ticketmaster's own transfer, payout to the account holder.
+  const onTM = g.soldPrice == null && g.platform === 'Ticketmaster' && g.listPrice != null;
+  state.saleForm = {
+    id: g.id, buyer: g.buyer || '', qty: g.qtySold || 2,
+    price: g.soldPrice ?? (onTM ? g.listPrice : p.friend),
+    platform: g.soldPrice != null ? g.platform || FRIEND : onTM ? 'Ticketmaster' : FRIEND,
+    soldOn: g.soldOn || new Date().toLocaleDateString('en-CA'), paid: !!g.paid, transferred: onTM || !!g.transferred,
+    paidTo: g.paidTo || (onTM ? TM_PAYEE : state.user.name), payout: g.payout ?? '', ...extra,
+  };
 }
 
 // ---- Sales: thermometers + log
@@ -714,22 +641,37 @@ function thermos(compact = false) {
   </div>`;
 }
 
-function salesView() {
+function payoutsView() {
   const S = state.settings;
   const sales = state.games.filter(g => g.soldPrice != null).sort((a, b) => a.dateObj - b.dateObj);
+  const amt = g => received(g, S);
+  const sum = list => list.reduce((a, g) => a + amt(g), 0);
+  const person = p => {
+    const mine = sales.filter(g => g.paidTo === p), coming = sum(mine.filter(g => !g.paid));
+    return `<div class="payee ${p === P1 ? 'p1' : 'p2'}"><span class="label">${esc(p)} has gotten</span><span class="val">${money(sum(mine.filter(g => g.paid)), 2)}</span>
+      <span class="muted small">${mine.length} payout${mine.length === 1 ? '' : 's'}${coming ? ` · ${money(coming, 2)} on the way` : ''}</span></div>`;
+  };
+  const nobody = sales.filter(g => !CONFIG.PARTNERS.includes(g.paidTo));
   return `
-  <div class="view-head"><h1>Sales</h1><button class="btn" data-act="saleadd">Log a sale</button></div>
+  <div class="view-head"><h1>Payouts</h1><button class="btn" data-act="saleadd">Log a sale</button></div>
   ${thermos()}
+  <div class="payees">${CONFIG.PARTNERS.map(person).join('')}</div>
+  ${nobody.length ? `<p class="warn-t small">${nobody.length} sale${nobody.length === 1 ? ' doesn\'t' : 's don\'t'} say who got paid out yet. Tap ${esc(P1)} or ${esc(P2)} on the line.</p>` : ''}
   <section class="card">
-    <h2>Sales log</h2>
+    <h2>Who's gotten what</h2>
     ${sales.length ? `<div class="sheet-wrap flat"><table class="sheet">
-      <thead><tr><th class="sticky">Game</th><th>Buyer</th><th class="r">Tickets</th><th class="r">Each</th><th>Where</th><th class="r">We get</th><th>Money in</th><th>Transferred</th><th></th></tr></thead>
+      <thead><tr><th class="sticky">Game</th><th>Sold</th><th>Buyer</th><th>Paid out to</th><th class="r">Amount</th><th>Money in</th><th>Transferred</th><th></th></tr></thead>
       <tbody>${sales.map(g => `<tr class="${saleDone(g) ? '' : 'pending-row'}">
-        <td class="sticky">${gameCell(g)}</td><td>${esc(g.buyer || '—')}</td><td class="r">${g.qtySold || seatCount()}</td><td class="r">${money(g.soldPrice)}</td><td>${esc(g.platform || '—')}</td>
-        <td class="r"><b>${money(received(g, S))}</b></td>
+        <td class="sticky">${gameCell(g)}</td>
+        <td class="nowrap">${g.qtySold || seatCount()} @ ${money(g.soldPrice)} <span class="muted small">${g.platform === FRIEND ? 'friend' : esc(g.platform || '—')}</span></td>
+        <td>${esc(g.buyer || '—')}</td>
+        <td>${payeeSeg(g)}</td>
+        <td class="r">${payoutIn(g)}</td>
         <td><input type="checkbox" data-gid="${g.id}" data-flag="paid" ${g.paid ? 'checked' : ''} aria-label="Money received"></td>
         <td><input type="checkbox" data-gid="${g.id}" data-flag="transferred" ${g.transferred ? 'checked' : ''} aria-label="Tickets transferred"></td>
-        <td class="r"><button class="link small" data-act="saleedit:${g.id}">Edit</button></td></tr>`).join('')}</tbody></table></div>` : '<p class="muted">No sales yet. Log one from a pitch, or with the button above.</p>'}
+        <td class="r"><button class="link small" data-act="saleedit:${g.id}">Edit</button></td></tr>`).join('')}</tbody>
+      <tfoot><tr><td class="sticky"><b>Total</b></td><td colspan="3" class="muted small">${money(sum(sales.filter(g => g.paid)), 2)} in so far</td><td class="r"><b>${money(sum(sales), 2)}</b></td><td colspan="3"></td></tr></tfoot>
+    </table></div>` : '<p class="muted">No sales yet. Mark a game Sold… on the Sell page, or use the button above.</p>'}
   </section>`;
 }
 
@@ -855,7 +797,7 @@ function alerts() {
   const planned = resalesPlanned();
   for (const t of tranches(state.settings, state.games)) {
     const days = Math.ceil((t.decideBy - new Date()) / 86400e3);
-    if (days >= 0 && days <= 21) out.push({ tone: days <= 7 ? 'warn' : 'info', text: `<b>Decide tranche ${t.n}</b> (${t.games.length} games, ${t.first.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} – ${t.last.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}) by ${t.decideBy.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })} — ${days === 0 ? 'today' : `in ${days} days`}.`, act: 'go:strategy' });
+    if (days >= 0 && days <= 21) out.push({ tone: days <= 7 ? 'warn' : 'info', text: `<b>Decide tranche ${t.n}</b> (${t.games.length} games, ${t.first.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} – ${t.last.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}) by ${t.decideBy.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })} — ${days === 0 ? 'today' : `in ${days} days`}.`, act: 'go:sell' });
   }
   if (cap && planned > cap) out.push({ tone: 'warn', text: `<b>${planned} games marked to sell, but the 2026-27 resale cap is ${cap}.</b> Selling more than that risks a penalty or a "broker" flag on the account.`, act: 'go:market' });
   for (const g of up) {
@@ -1179,14 +1121,19 @@ function renderModal() {
   document.body.classList.toggle('drawer-open', !!html || !!state.open);
 }
 
-function renderDrawer() {
+function renderDrawer(keep) {
   const root = $('#drawer-root');
   if (!root) return;
   const g = state.games.find(x => x.id === state.open);
   document.body.classList.toggle('drawer-open', !!g);
   if (!g) { root.innerHTML = ''; return; }
-  root.innerHTML = `<div class="scrim" data-act="close"></div><aside class="drawer" role="dialog" aria-modal="true" aria-label="${esc(g.opp)}">${drawerBody(g)}</aside>`;
-  root.querySelector('.drawer').focus?.();
+  // Re-rendering the game that's already open keeps its scroll position and skips the slide-in.
+  const prev = root.querySelector('.drawer');
+  keep ||= prev && { id: prev.dataset.drawer, top: prev.scrollTop };
+  const same = keep?.id === g.id;
+  root.innerHTML = `<div class="scrim ${same ? 'still' : ''}" data-act="close"></div><aside class="drawer ${same ? 'still' : ''}" data-drawer="${g.id}" role="dialog" aria-modal="true" aria-label="${esc(g.opp)}">${drawerBody(g)}</aside>`;
+  const d = root.querySelector('.drawer');
+  if (same) d.scrollTop = keep.top; else d.focus?.();
 }
 
 function drawerBody(g) {
@@ -1212,7 +1159,7 @@ function drawerBody(g) {
   </div>
   <div class="d-body">
     <section>
-      <h3>Plan</h3>
+      <h3>Status</h3>
       <div class="seg full">${[['undecided', 'Undecided'], ['use', 'We\'re going'], ['sell', 'Sell']].map(([k, l]) => `<button class="${g.plan === k ? 'on' : ''}" data-act="plan:${k}">${l}</button>`).join('')}</div>
       <div class="interest">
         ${CONFIG.PARTNERS.map(p => `<label class="toggle"><input type="checkbox" data-int="${p}" ${g.interest[p] ? 'checked' : ''}><span>${esc(p)} interested</span></label>`).join('')}
@@ -1233,7 +1180,7 @@ function drawerBody(g) {
       <h3>Listing</h3>
       <div class="form-grid">
         <label class="field"><span>Platform</span><select data-f="platform"><option value="">—</option>${PLATFORMS.map(p => `<option ${g.platform === p ? 'selected' : ''}>${p}</option>`).join('')}</select></label>
-        <label class="field"><span>List price (each)</span><input data-f="listPrice" type="number" inputmode="decimal" value="${g.listPrice ?? ''}" placeholder="${fair ? fair : ''}"></label>
+        <label class="field"><span>List price (each)</span><input data-f="listPrice" type="number" inputmode="decimal" value="${g.listPrice ?? ''}" placeholder="${quick ?? ''}"></label>
         <label class="field"><span>Listed on</span><input data-f="listedOn" type="date" value="${esc(g.listedOn)}"></label>
       </div>
       ${g.listPrice != null ? `<p class="small">At ${money(g.listPrice)} × ${n} on ${esc(g.platform || state.settings.defaultPlatform)} (${fee}% fee) you'd net <b>${money(netPayout(g.listPrice, n, fee))}</b>.${m?.low ? ` That's ${(g.listPrice / m.low).toFixed(2)}× today's get-in.` : ''}</p>` : ''}
@@ -1247,6 +1194,7 @@ function drawerBody(g) {
         <label class="field"><span>Qty sold</span><input data-f="qtySold" type="number" inputmode="numeric" min="1" max="${n}" value="${g.qtySold ?? n}"></label>
         <label class="field"><span>Payout</span><input data-f="payout" type="number" inputmode="decimal" value="${g.payout ?? ''}" placeholder="${autoPayout ?? ''}"><small class="muted">Blank = auto (${fee}% fee)</small></label>
         <label class="field"><span>Sold on</span><input data-f="soldOn" type="date" value="${esc(g.soldOn)}"></label>
+        <label class="field"><span>Paid out to</span><select data-f="paidTo"><option value="">—</option>${CONFIG.PARTNERS.map(p => `<option ${g.paidTo === p ? 'selected' : ''}>${esc(p)}</option>`).join('')}</select></label>
         <label class="field wide"><span>Buyer</span><input data-f="buyer" value="${esc(g.buyer)}" placeholder="Name or marketplace"></label>
       </div>
       <div class="interest">
@@ -1273,10 +1221,10 @@ function drawerBody(g) {
       <table class="tbl price-tbl"><thead><tr><th>Step</th><th>From</th><th class="r">List on TM</th><th class="r">You net · ${n} tix</th></tr></thead><tbody>
         ${lad.steps.map((st, i) => {
           const from = i === 0 ? 'now' : new Date(startTime(g) - st.fromHours * 3600e3).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
-          return `<tr class="${i === lad.current ? 'now-row' : i < lad.current ? 'done-row' : ''}"><td>${st.label}${i === lad.current ? ' <span class="tag">now</span>' : ''}</td><td>${from}</td><td class="r"><b>${money(st.value)}</b></td><td class="r">${money(netPayout(st.value, n, feePct(state.settings, 'Ticketmaster')))}</td></tr>`;
+          return `<tr class="${i === lad.current ? 'now-row' : i < lad.current ? 'done-row' : ''}"><td>${st.label}${i === lad.current ? ' <span class="tag">now</span>' : ''}</td><td>${from}</td><td class="r">${moneyIn(g, st.key, st.overridden ? st.value : '', st.auto, st.overridden ? 'set' : '', st.label + ' price')}</td><td class="r">${money(netPayout(st.value, n, feePct(state.settings, 'Ticketmaster')))}</td></tr>`;
         }).join('')}
       </tbody></table>
-      <p class="muted small">${pricingTip(g, lad)}</p>` : ''}
+      <p class="muted small">${pricingTip(g, lad)} Type over a step to set it by hand; clear it to go back to automatic.</p>` : ''}
       <div class="links">${searchLinks(g, m).map(l => `<a href="${esc(l.href)}" target="_blank" rel="noopener">${esc(l.label)} ↗</a>`).join('')}</div>
     </section>
 
@@ -1366,8 +1314,14 @@ async function action(act, arg) {
     case 'filter': state.filter = arg; return state.view === 'games' ? render() : go('games');
     case 'mode': state.gamesMode = arg; return render();
     case 'msort': state.marketSort = arg; return render();
-    case 'strat': state.stratTab = arg; return render();
-    case 'sellf': state.sellFilter = arg; return render();
+    case 'tab': state.sellTab = arg; return render();
+    case 'paidto': {
+      const [gid, who] = arg.split('|'), pg = state.games.find(x => x.id === gid);
+      if (!pg) return;
+      pg.paidTo = pg.paidTo === who ? '' : who;
+      persist(pg);
+      return renderKeepFocus();
+    }
     case 'pitch': state.pitch = { id: arg, step: null, variant: 'standard', type: 'text', pct: Number(state.settings.ffDiscount) || 20, contactId: '', n: 0, text: '', dirty: false, photo: true }; loadViewFile(); return renderModal();
     case 'psms': case 'pmail': {
       const P = state.pitch, c = (state.contacts || []).find(x => x.id === P.contactId);
@@ -1401,7 +1355,7 @@ async function action(act, arg) {
     }
     case 'saleadd': { const first = state.games.find(x => !isPast(x) && x.plan === 'sell' && x.soldPrice == null) || state.games.find(x => !isPast(x)); openSale(first); return renderModal(); }
     case 'saleedit': openSale(state.games.find(x => x.id === arg)); return renderModal();
-    case 'sclose': state.saleForm = null; return renderModal();
+    case 'sclose': state.saleForm = null; return render();
     case 'ssave': return saveSale();
     case 'cadd': {
       const v = id => document.getElementById(id)?.value.trim() || '';
@@ -1438,7 +1392,7 @@ async function action(act, arg) {
       g.soldOn = new Date().toLocaleDateString('en-CA');
       g.platform ||= state.settings.defaultPlatform || '';
       break;
-    case 'unsell': Object.assign(g, { soldPrice: null, qtySold: null, payout: null, soldOn: '', buyer: '', transferred: false, paid: false }); break;
+    case 'unsell': clearSale(g); break;
     case 'copylisting': return copyListing(g);
     default: return;
   }
@@ -1481,11 +1435,15 @@ function onChange(e) {
   }
 }
 
-// Inline edits in the Strategy sheets.
+// Inline edits in the Sell sheet and the game panel.
 function onCellChange(el) {
   const g = state.games.find(x => x.id === el.dataset.gid);
   if (!g) return;
-  if (el.dataset.assign != null) assign(g, el.value);
+  let focus;
+  if (el.dataset.assign != null) {
+    if (!assign(g, el.value)) return;
+    if (el.value === 'listed') focus = `[data-gid="${g.id}"][data-k="listPrice"]`;
+  }
   else if (el.dataset.seat != null) { const seats = [...g.seats]; seats[+el.dataset.seat] = el.value.trim(); g.seats = seats; }
   else if (el.dataset.k === 'note') g.note = el.value;
   else {
@@ -1495,7 +1453,7 @@ function onCellChange(el) {
     if (k === 'listPrice') { g.platform ||= 'Ticketmaster'; if (g.listPrice != null && !g.listedOn) g.listedOn = new Date().toLocaleDateString('en-CA'); }
   }
   persist(g);
-  renderKeepFocus();
+  renderKeepFocus(focus);
 }
 
 function onPitchChange(el) {
@@ -1519,7 +1477,8 @@ async function saveSale() {
   if (!g) return;
   const price = Number(F.price), qty = Number(F.qty) || 2;
   if (!price) return toast('Add the price each');
-  Object.assign(g, { soldPrice: price, qtySold: qty, buyer: F.buyer.trim(), platform: F.platform, soldOn: F.soldOn, paid: !!F.paid, transferred: !!F.transferred, payout: null });
+  const payout = F.payout === '' || F.payout == null ? null : Number(F.payout);
+  Object.assign(g, { soldPrice: price, qtySold: qty, buyer: F.buyer.trim(), platform: F.platform, soldOn: F.soldOn, paid: !!F.paid, transferred: !!F.transferred, payout: Number.isFinite(payout) ? payout : null, paidTo: F.paidTo || '' });
   if (qty < seatCount() && g.plan === 'use') g.seats = [state.user.name, F.buyer.trim() || 'Buyer'];
   else if (qty >= seatCount()) g.plan = 'sell';
   state.saleForm = null;

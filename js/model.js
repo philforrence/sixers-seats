@@ -113,7 +113,7 @@ export function makeGame(row, app) {
     seats: parsed.seats,
     platform: '', listPrice: null, listedOn: '', soldPrice: null, qtySold: null, fees: null,
     payout: null, buyer: '', soldOn: '', transferred: false, paid: false, updatedBy: '', updatedAt: '', appRow: null,
-    comp: null, compAt: '', compUrl: '', compNote: '', compN: null, pStretch: null, p2wk: null, p5d: null, p48h: null, hook: '',
+    comp: null, compAt: '', compUrl: '', compNote: '', compN: null, pStretch: null, p2wk: null, p5d: null, p48h: null, hook: '', paidTo: '',
   };
   if (app) {
     Object.assign(g, {
@@ -140,6 +140,7 @@ export function makeGame(row, app) {
       p5d: num(app.p5d),
       p48h: num(app.p48h),
       hook: app.hook || '',
+      paidTo: app.paidTo || '',
     });
   }
   return g;

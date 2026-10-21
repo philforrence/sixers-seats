@@ -270,6 +270,7 @@ button.stat:hover { border-color: var(--accent); }
 .drawer { position: fixed; z-index: 41; background: var(--bg); overflow-y: auto; overscroll-behavior: contain; inset: 0; animation: up .22s cubic-bezier(.2,.8,.2,1); outline: none; }
 @media (min-width: 900px) { .drawer { inset: 0 0 0 auto; width: min(620px, 100vw); border-left: 1px solid var(--line); box-shadow: -10px 0 40px rgba(0,0,0,.2); animation: slide .22s cubic-bezier(.2,.8,.2,1); } }
 @media (max-width: 899px) { .drawer { top: 0; padding-top: env(safe-area-inset-top); } }
+.scrim.still, .drawer.still { animation: none; }
 @keyframes fade { from { opacity: 0; } }
 @keyframes up { from { transform: translateY(30px); opacity: 0; } }
 @keyframes slide { from { transform: translateX(40px); opacity: 0; } }
@@ -422,9 +423,6 @@ a.comp-link:hover { text-decoration: underline; }
 .sheet tr.mk.band .mk-line { height: 26px; }
 .sheet tr.mk.band .mk-line::before { top: 10px; height: 6px; }
 .sheet tr.mk.band .mk-flag { height: 24px; margin-top: 1px; font-size: 12px; }
-.sheet tr.mk.deadline { --mk: var(--mk-deadline); }
-.sheet tr.mk.deadline .mk-flag { color: #1a1300; }
-.sheet tr.mk.deadline .mk-line::before { background: repeating-linear-gradient(90deg, var(--mk) 0 14px, transparent 14px 20px); }
 .sheet tr.mk.today { --mk: var(--mk-today); }
 
 .t-strip { display: flex; flex-wrap: wrap; gap: 8px; }
@@ -509,3 +507,22 @@ a.comp-link:hover { text-decoration: underline; }
 .photo-row img { width: 112px; height: 68px; object-fit: cover; border-radius: 8px; flex: none; }
 .photo-row.off img { opacity: .35; filter: grayscale(1); }
 .comp-link.ignored { color: var(--muted); text-decoration: line-through; }
+
+/* ---------- Status cell, sold lines, payouts */
+.cell-select.a-listed { color: var(--c-listed); } .cell-select.a-sold { color: var(--c-sold); }
+.status-cell { display: inline-flex; align-items: center; gap: 6px; }
+.money-in.wide .cell-in { width: 4.8em; }
+.seg.tiny { padding: 2px; border-radius: 9px; }
+.seg.tiny button { padding: 3px 9px; font-size: 12px; border-radius: 7px; }
+.seg.tiny button.on { color: #fff; background: var(--p2); }
+.seg.tiny button.on:first-child { background: var(--p1); }
+.sold-info { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; font-size: 13px; }
+.mini { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; color: var(--muted); white-space: nowrap; cursor: pointer; }
+.mini input { width: 16px; height: 16px; accent-color: var(--accent); }
+.sheet tr.sold-line td { background: color-mix(in srgb, var(--c-sold) 7%, var(--surface)); }
+.sheet tr.sold-line.done td { background: color-mix(in srgb, var(--c-sold) 13%, var(--surface)); }
+.payees { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin: 14px 0; }
+.payee { display: flex; flex-direction: column; gap: 2px; background: var(--surface); border: 1px solid var(--line); border-left: 5px solid var(--p1); border-radius: 12px; padding: 12px 14px; }
+.payee.p2 { border-left-color: var(--p2); }
+.payee .val { font-family: var(--display); font-size: 28px; font-weight: 700; }
+.sheet tfoot td { border-top: 2px solid var(--line); font-size: 14px; }

@@ -16,10 +16,10 @@ const rowToContact = (r, i) => ({ id: 'c' + i + '-' + (r[0] || ''), ...Object.fr
 // Columns of the app-owned tab, in order.
 const APP_COLS = ['date', 'opponent', 'plan', 'seat1', 'seat2', 'seat3', 'seat4', 'platform', 'listPrice', 'listedOn',
   'soldPrice', 'qtySold', 'fees', 'payout', 'buyer', 'soldOn', 'transferred', 'paid', 'updatedBy', 'updatedAt',
-  'comp', 'compAt', 'pStretch', 'p2wk', 'p5d', 'p48h', 'hook'];
+  'comp', 'compAt', 'pStretch', 'p2wk', 'p5d', 'p48h', 'hook', 'paidTo'];
 const APP_HEADERS = ['Date', 'Opponent', 'Plan', 'Seat 1', 'Seat 2', 'Seat 3', 'Seat 4', 'Platform', 'List Price (ea)', 'Listed On',
   'Sold Price (ea)', 'Qty Sold', 'Fees', 'Payout', 'Buyer', 'Sold On', 'Transferred', 'Paid Out', 'Updated By', 'Updated At',
-  'Comparable (all-in)', 'Comparable Checked', 'Stretch Price', '14-Day Price', '5-Day Price', '2-Day Price', 'Pitch Hook'];
+  'Comparable (all-in)', 'Comparable Checked', 'Stretch Price', '14-Day Price', '5-Day Price', '2-Day Price', 'Pitch Hook', 'Paid To'];
 
 // Header names in the existing "Home Games" tab we read (and the ones we write back).
 const H = {
@@ -44,7 +44,7 @@ function appValues(g, who) {
     updatedBy: who, updatedAt: nowStamp(),
     comp: g.comp ?? '', compAt: g.compAt || '',
     pStretch: g.pStretch ?? '', p2wk: g.p2wk ?? '', p5d: g.p5d ?? '', p48h: g.p48h ?? '',
-    hook: g.hook || '',
+    hook: g.hook || '', paidTo: g.paidTo || '',
   };
 }
 
