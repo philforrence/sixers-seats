@@ -533,6 +533,7 @@ a.comp-link:hover { text-decoration: underline; }
 #tip a { color: var(--accent); font-weight: 600; }
 #tip .tip-hook { margin: 6px 0; font-style: italic; }
 #tip .tip-row { display: flex; align-items: center; gap: 8px; margin-top: 4px; }
+#tip .tip-sep { border-top: 1px solid var(--line); margin: 7px 0; }
 .has-tip > span, .strip .has-tip { text-decoration: underline dotted color-mix(in srgb, var(--muted) 70%, transparent); text-underline-offset: 3px; cursor: help; }
 .sell-sheet th { vertical-align: middle; }
 .sell-sheet td { height: 48px; }

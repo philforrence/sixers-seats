@@ -470,21 +470,18 @@ function sellView() {
   if (!tabs.find(t => t[0] === state.sellTab)) state.sellTab = 'all';
   const rows = games.filter(tabs.find(t => t[0] === state.sellTab)[2]);
   const pct = Number(S.ffDiscount) || 20;
-  const cols = 8;
+  const cols = 6;
   const row = g => {
     const st = assignment(g);
     if (st === 'sold') return soldLine(g);
     const p = pitchPrices(g, null, pct), forSale = st === 'sell' || st === 'listed' || st === 'friend';
     const off = st === 'listed' && p.tm != null && g.listPrice !== p.tm;
-    const fTip = esc(friendTip(p, pct));
     return `<tr class="${windowOf(g)} ${isPast(g) ? 'past-row' : ''}">
       <td class="sticky">${gameCell(g, gameTip(g))}</td>
       <td class="nowrap">${winChip(g)}</td>
       <td>${assignSelect(g)}</td>
       <td class="r nowrap">${compLean(g)}</td>
-      <td class="r nowrap"><span class="num ${forSale ? 'strong' : 'muted'} ${off ? 'off' : ''}" data-tip="${esc(tmTip(g, p))}">${money(p.tm)}</span></td>
-      <td class="r nowrap"><span class="num strong" data-tip="${fTip}">${money(p.friend)}</span></td>
-      <td class="r nowrap"><span class="num muted" data-tip="${fTip}">${money(p.ff)}</span></td>
+      <td class="r nowrap"><span class="num ${forSale ? 'strong' : 'muted'} ${off ? 'off' : ''}" data-tip="${esc(tmTip(g, p) + '<div class="tip-sep"></div>' + friendTip(p, pct))}">${money(p.tm)}</span></td>
       <td class="r">${isPast(g) ? '' : `<button class="btn small ghost" data-act="pitch:${g.id}">Pitch</button>`}</td>
     </tr>`;
   };
@@ -492,9 +489,7 @@ function sellView() {
   const outTip = `<b>Days out</b>${['far', 'w14', 'w5', 'w2'].map(w => `<div class="tip-row"><i class="win-dot ${w}"></i>${WINDOW_LABEL[w]}</div>`).join('')}`;
   const head = `<tr><th class="sticky">Game</th>${th('Out', outTip)}${th('Status', "Who's going, or where the game is in selling. <b>On Ticketmaster</b> shows its list price; <b>Sold…</b> logs a sale.")}
     ${th('Comp', 'The cheapest pair in rows 1–3 of sections 201–203 and 223–224 on Vivid Seats, price per ticket with fees. <b>find</b> means no comp yet, so the price is estimated.', 'r')}
-    ${th('TM now', `Today's step on the price ladder: what to list at on Ticketmaster. Stretch is 15% over the 14-day price, then 14 days, 5 days (−15%) and 2 days (−30%) out. Amber means our listing doesn't match it.`, 'r')}
-    ${th('Friend', 'What similar seats cost online with fees included. What we charge people we know.', 'r')}
-    ${th('F&amp;F', `Friend price minus ${pct}%, rounded down to $5.`, 'r')}<th></th></tr>`;
+    ${th('Suggested Price', `What to list at on Ticketmaster today, from the price ladder: Stretch is 15% over the 14-day price, then 14 days, 5 days (−15%) and 2 days (−30%) out. Amber means our listing doesn't match it. The popover also has the friend and F&amp;F prices.`, 'r')}<th></th></tr>`;
   const going = games.filter(g => g.plan === 'use' && g.soldPrice == null).length;
   const toSell = games.filter(g => g.plan === 'sell' && g.soldPrice == null).length;
   const sold = games.filter(g => g.soldPrice != null).length, und = games.filter(g => g.plan === 'undecided' && g.soldPrice == null).length;
@@ -560,7 +555,7 @@ function soldLine(g) {
     <td class="sticky">${gameCell(g)}</td>
     <td class="nowrap">${winChip(g)}</td>
     <td>${assignSelect(g)}</td>
-    <td colspan="5"><button class="sold-sum" data-act="saleedit:${g.id}" data-tip="${esc(tip)}">
+    <td colspan="3"><button class="sold-sum" data-act="saleedit:${g.id}" data-tip="${esc(tip)}">
       <span class="muted nowrap">${qty} @ ${money(g.soldPrice)}</span>${who}<b class="num">${cash(received(g, state.settings))}</b>${tag}<span class="edit-hint">Edit</span>
     </button></td>
   </tr>`;
