@@ -1,5 +1,5 @@
 {
- "checked": "2026-10-20T17:30:00Z",
+ "checked": "2026-10-21T16:00:00Z",
  "source": "Vivid Seats",
  "rule": "Cheapest pair (2+ tickets) in rows 1-3 of sections 201, 202, 203, 223, 224. Prices include fees.",
  "games": {
@@ -9,7 +9,8 @@
    "row": 2,
    "n": 10,
    "listing": "VB17597520097",
-   "url": "https://www.vividseats.com/philadelphia-76ers-tickets-xfinity-mobile-arena-10-22-2026--sports-nba-basketball/production/7415522?showDetails=VB17597520097&qty=2"
+   "url": "https://www.vividseats.com/philadelphia-76ers-tickets-xfinity-mobile-arena-10-22-2026--sports-nba-basketball/production/7415522?showDetails=VB17597520097&qty=2",
+   "checked": "2026-10-20"
   },
   "2026-10-24": {
    "price": 220,
@@ -17,7 +18,8 @@
    "row": 1,
    "n": 11,
    "listing": "VB17589716005",
-   "url": "https://www.vividseats.com/philadelphia-76ers-tickets-xfinity-mobile-arena-10-24-2026/production/7432883?showDetails=VB17589716005&qty=2"
+   "url": "https://www.vividseats.com/philadelphia-76ers-tickets-xfinity-mobile-arena-10-24-2026/production/7432883?showDetails=VB17589716005&qty=2",
+   "checked": "2026-10-20"
   },
   "2026-10-25": {
    "price": 199,
@@ -25,7 +27,8 @@
    "row": 3,
    "n": 12,
    "listing": "VB17586938403",
-   "url": "https://www.vividseats.com/philadelphia-76ers-tickets-xfinity-mobile-arena-10-25-2026/production/7433080?showDetails=VB17586938403&qty=2"
+   "url": "https://www.vividseats.com/philadelphia-76ers-tickets-xfinity-mobile-arena-10-25-2026/production/7433080?showDetails=VB17586938403&qty=2",
+   "checked": "2026-10-20"
   },
   "2026-10-30": {
    "price": 333,
@@ -33,7 +36,8 @@
    "row": 1,
    "n": 12,
    "listing": "VB17598664509",
-   "url": "https://www.vividseats.com/philadelphia-76ers-tickets-xfinity-mobile-arena-10-30-2026--sports-nba-basketball/production/7419673?showDetails=VB17598664509&qty=2"
+   "url": "https://www.vividseats.com/philadelphia-76ers-tickets-xfinity-mobile-arena-10-30-2026--sports-nba-basketball/production/7419673?showDetails=VB17598664509&qty=2",
+   "checked": "2026-10-20"
   },
   "2026-11-02": {
    "price": 242,
@@ -41,7 +45,8 @@
    "row": 2,
    "n": 6,
    "listing": "VB17545271629",
-   "url": "https://www.vividseats.com/philadelphia-76ers-tickets-xfinity-mobile-arena-11-2-2026/production/7433064?showDetails=VB17545271629&qty=2"
+   "url": "https://www.vividseats.com/philadelphia-76ers-tickets-xfinity-mobile-arena-11-2-2026/production/7433064?showDetails=VB17545271629&qty=2",
+   "checked": "2026-10-20"
   },
   "2026-11-10": {
    "price": 388,
@@ -49,7 +54,8 @@
    "row": 1,
    "n": 8,
    "listing": "VB17519175165",
-   "url": "https://www.vividseats.com/philadelphia-76ers-tickets-xfinity-mobile-arena-11-10-2026/production/7433132?showDetails=VB17519175165&qty=2"
+   "url": "https://www.vividseats.com/philadelphia-76ers-tickets-xfinity-mobile-arena-11-10-2026/production/7433132?showDetails=VB17519175165&qty=2",
+   "checked": "2026-10-20"
   },
   "2026-11-12": {
    "price": 259,
@@ -57,7 +63,8 @@
    "row": 1,
    "n": 8,
    "listing": "VB17596752779",
-   "url": "https://www.vividseats.com/philadelphia-76ers-tickets-xfinity-mobile-arena-11-12-2026/production/7433136?showDetails=VB17596752779&qty=2"
+   "url": "https://www.vividseats.com/philadelphia-76ers-tickets-xfinity-mobile-arena-11-12-2026/production/7433136?showDetails=VB17596752779&qty=2",
+   "checked": "2026-10-20"
   },
   "2026-11-15": {
    "price": 306,
@@ -65,7 +72,8 @@
    "row": 3,
    "n": 6,
    "listing": "VB16902941598",
-   "url": "https://www.vividseats.com/philadelphia-76ers-tickets-xfinity-mobile-arena-11-15-2026/production/7432865?showDetails=VB16902941598&qty=2"
+   "url": "https://www.vividseats.com/philadelphia-76ers-tickets-xfinity-mobile-arena-11-15-2026/production/7432865?showDetails=VB16902941598&qty=2",
+   "checked": "2026-10-20"
   },
   "2026-11-21": {
    "price": 282,
@@ -73,7 +81,8 @@
    "row": 2,
    "n": 5,
    "listing": "VB17590400513",
-   "url": "https://www.vividseats.com/philadelphia-76ers-tickets-xfinity-mobile-arena-11-21-2026/production/7432903?showDetails=VB17590400513&qty=2"
+   "url": "https://www.vividseats.com/philadelphia-76ers-tickets-xfinity-mobile-arena-11-21-2026/production/7432903?showDetails=VB17590400513&qty=2",
+   "checked": "2026-10-20"
   },
   "2026-11-23": {
    "price": 276,
@@ -81,7 +90,8 @@
    "row": 3,
    "n": 3,
    "listing": "VB17184453409",
-   "url": "https://www.vividseats.com/philadelphia-76ers-tickets-xfinity-mobile-arena-11-23-2026/production/7431523?showDetails=VB17184453409&qty=2"
+   "url": "https://www.vividseats.com/philadelphia-76ers-tickets-xfinity-mobile-arena-11-23-2026/production/7431523?showDetails=VB17184453409&qty=2",
+   "checked": "2026-10-20"
   },
   "2026-11-25": {
    "price": 454,
@@ -89,7 +99,8 @@
    "row": 2,
    "n": 7,
    "listing": "VB17589447761",
-   "url": "https://www.vividseats.com/philadelphia-76ers-tickets-xfinity-mobile-arena-10-31-2026--sports-nba-basketball/production/7419677?showDetails=VB17589447761&qty=2"
+   "url": "https://www.vividseats.com/philadelphia-76ers-tickets-xfinity-mobile-arena-10-31-2026--sports-nba-basketball/production/7419677?showDetails=VB17589447761&qty=2",
+   "checked": "2026-10-20"
   },
   "2026-12-01": {
    "price": 194,
@@ -97,7 +108,8 @@
    "row": 2,
    "n": 7,
    "listing": "VB17544790027",
-   "url": "https://www.vividseats.com/philadelphia-76ers-tickets-xfinity-mobile-arena-12-1-2026/production/7431531?showDetails=VB17544790027&qty=2"
+   "url": "https://www.vividseats.com/philadelphia-76ers-tickets-xfinity-mobile-arena-12-1-2026/production/7431531?showDetails=VB17544790027&qty=2",
+   "checked": "2026-10-20"
   },
   "2026-12-02": {
    "price": 308,
@@ -105,7 +117,8 @@
    "row": 2,
    "n": 6,
    "listing": "VB17570516266",
-   "url": "https://www.vividseats.com/philadelphia-76ers-tickets-xfinity-mobile-arena-12-2-2026/production/7431535?showDetails=VB17570516266&qty=2"
+   "url": "https://www.vividseats.com/philadelphia-76ers-tickets-xfinity-mobile-arena-12-2-2026/production/7431535?showDetails=VB17570516266&qty=2",
+   "checked": "2026-10-20"
   },
   "2026-12-12": {
    "price": 420,
@@ -113,7 +126,8 @@
    "row": 3,
    "n": 1,
    "listing": "VB17544313094",
-   "url": "https://www.vividseats.com/philadelphia-76ers-tickets-xfinity-mobile-arena-12-12-2026/production/7431050?showDetails=VB17544313094&qty=2"
+   "url": "https://www.vividseats.com/philadelphia-76ers-tickets-xfinity-mobile-arena-12-12-2026/production/7431050?showDetails=VB17544313094&qty=2",
+   "checked": "2026-10-20"
   },
   "2026-12-17": {
    "price": 244,
@@ -121,7 +135,8 @@
    "row": 3,
    "n": 4,
    "listing": "VB17184453647",
-   "url": "https://www.vividseats.com/philadelphia-76ers-tickets-xfinity-mobile-arena-12-17-2026/production/7431365?showDetails=VB17184453647&qty=2"
+   "url": "https://www.vividseats.com/philadelphia-76ers-tickets-xfinity-mobile-arena-12-17-2026/production/7431365?showDetails=VB17184453647&qty=2",
+   "checked": "2026-10-20"
   },
   "2026-12-23": {
    "price": 493,
@@ -129,7 +144,8 @@
    "row": 3,
    "n": 4,
    "listing": "VB17544265397",
-   "url": "https://www.vividseats.com/philadelphia-76ers-tickets-xfinity-mobile-arena-12-23-2026/production/7431549?showDetails=VB17544265397&qty=2"
+   "url": "https://www.vividseats.com/philadelphia-76ers-tickets-xfinity-mobile-arena-12-23-2026/production/7431549?showDetails=VB17544265397&qty=2",
+   "checked": "2026-10-20"
   },
   "2027-01-04": {
    "price": 257,
@@ -137,7 +153,8 @@
    "row": 3,
    "n": 4,
    "listing": "VB16902941600",
-   "url": "https://www.vividseats.com/philadelphia-76ers-tickets-xfinity-mobile-arena-1-4-2027/production/7432080?showDetails=VB16902941600&qty=2"
+   "url": "https://www.vividseats.com/philadelphia-76ers-tickets-xfinity-mobile-arena-1-4-2027/production/7432080?showDetails=VB16902941600&qty=2",
+   "checked": "2026-10-20"
   },
   "2027-01-06": {
    "price": 411,
@@ -145,7 +162,161 @@
    "row": 2,
    "n": 3,
    "listing": "VB17492492375",
-   "url": "https://www.vividseats.com/philadelphia-76ers-tickets-xfinity-mobile-arena-1-6-2027/production/7431134?showDetails=VB17492492375&qty=2"
+   "url": "https://www.vividseats.com/philadelphia-76ers-tickets-xfinity-mobile-arena-1-6-2027/production/7431134?showDetails=VB17492492375&qty=2",
+   "checked": "2026-10-20"
+  },
+  "2027-01-08": {
+   "price": 336,
+   "sec": "203",
+   "row": 3,
+   "n": 4,
+   "listing": "VB17184453472",
+   "url": "https://www.vividseats.com/philadelphia-76ers-tickets-xfinity-mobile-arena-1-8-2027/production/7431034?showDetails=VB17184453472&qty=2",
+   "checked": "2026-10-21"
+  },
+  "2027-01-12": {
+   "price": 257,
+   "sec": "203",
+   "row": 3,
+   "n": 4,
+   "listing": "VB16902904011",
+   "url": "https://www.vividseats.com/philadelphia-76ers-tickets-xfinity-mobile-arena-1-12-2027/production/7431776?showDetails=VB16902904011&qty=2",
+   "checked": "2026-10-21"
+  },
+  "2027-01-14": {
+   "price": 259,
+   "sec": "203",
+   "row": 3,
+   "n": 3,
+   "listing": "VB17587018394",
+   "url": "https://www.vividseats.com/philadelphia-76ers-tickets-xfinity-mobile-arena-1-14-2027/production/7431988?showDetails=VB17587018394&qty=2",
+   "checked": "2026-10-21"
+  },
+  "2027-01-16": {
+   "price": 513,
+   "sec": "223",
+   "row": 1,
+   "n": 3,
+   "listing": "VB17601966912",
+   "url": "https://www.vividseats.com/philadelphia-76ers-tickets-xfinity-mobile-arena-1-16-2027/production/7431497?showDetails=VB17601966912&qty=2",
+   "checked": "2026-10-21"
+  },
+  "2027-01-19": {
+   "price": 240,
+   "sec": "203",
+   "row": 3,
+   "n": 2,
+   "listing": "VB17601962090",
+   "url": "https://www.vividseats.com/philadelphia-76ers-tickets-xfinity-mobile-arena-1-19-2027/production/7432607?showDetails=VB17601962090&qty=2",
+   "checked": "2026-10-21"
+  },
+  "2027-01-25": {
+   "price": 220,
+   "sec": "203",
+   "row": 3,
+   "n": 2,
+   "listing": "VB17184453657",
+   "url": "https://www.vividseats.com/philadelphia-76ers-tickets-xfinity-mobile-arena-1-25-2027/production/7432340?showDetails=VB17184453657&qty=2",
+   "checked": "2026-10-21"
+  },
+  "2027-01-27": {
+   "price": 213,
+   "sec": "203",
+   "row": 3,
+   "n": 5,
+   "listing": "VB17601945160",
+   "url": "https://www.vividseats.com/philadelphia-76ers-tickets-xfinity-mobile-arena-1-27-2027/production/7431635?showDetails=VB17601945160&qty=2",
+   "checked": "2026-10-21"
+  },
+  "2027-02-01": {
+   "price": 136,
+   "sec": "223",
+   "row": 1,
+   "n": 2,
+   "listing": "VB17537248025",
+   "url": "https://www.vividseats.com/philadelphia-76ers-tickets-xfinity-mobile-arena-2-1-2027/production/7430970?showDetails=VB17537248025&qty=2",
+   "checked": "2026-10-21"
+  },
+  "2027-02-05": {
+   "price": 208,
+   "sec": "203",
+   "row": 3,
+   "n": 4,
+   "listing": "VB17079906458",
+   "url": "https://www.vividseats.com/philadelphia-76ers-tickets-xfinity-mobile-arena-2-5-2027/production/7432250?showDetails=VB17079906458&qty=2",
+   "checked": "2026-10-21"
+  },
+  "2027-02-07": {
+   "price": 578,
+   "sec": "224",
+   "row": 3,
+   "n": 5,
+   "listing": "VB17601921669",
+   "url": "https://www.vividseats.com/philadelphia-76ers-tickets-xfinity-mobile-arena-2-7-2027/production/7432617?showDetails=VB17601921669&qty=2",
+   "checked": "2026-10-21"
+  },
+  "2027-02-08": {
+   "price": 208,
+   "sec": "203",
+   "row": 3,
+   "n": 2,
+   "listing": "VB17102715465",
+   "url": "https://www.vividseats.com/philadelphia-76ers-tickets-xfinity-mobile-arena-2-8-2027/production/7432008?showDetails=VB17102715465&qty=2",
+   "checked": "2026-10-21"
+  },
+  "2027-02-11": {
+   "price": 810,
+   "sec": "201",
+   "row": 3,
+   "n": 2,
+   "listing": "VB17544749706",
+   "url": "https://www.vividseats.com/philadelphia-76ers-tickets-xfinity-mobile-arena-2-11-2027/production/7432564?showDetails=VB17544749706&qty=2",
+   "checked": "2026-10-21"
+  },
+  "2027-02-17": {
+   "price": 263,
+   "sec": "203",
+   "row": 3,
+   "n": 3,
+   "listing": "VB17184453384",
+   "url": "https://www.vividseats.com/philadelphia-76ers-tickets-xfinity-mobile-arena-2-17-2027/production/7432623?showDetails=VB17184453384&qty=2",
+   "checked": "2026-10-21"
+  },
+  "2027-03-03": {
+   "price": 584,
+   "sec": "201",
+   "row": 1,
+   "n": 1,
+   "listing": "VB17601890030",
+   "url": "https://www.vividseats.com/philadelphia-76ers-tickets-xfinity-mobile-arena-3-3-2027/production/7432625?showDetails=VB17601890030&qty=2",
+   "checked": "2026-10-21"
+  },
+  "2027-03-04": {
+   "price": 486,
+   "sec": "203",
+   "row": 3,
+   "n": 9,
+   "listing": "VB17184453406",
+   "url": "https://www.vividseats.com/philadelphia-76ers-tickets-xfinity-mobile-arena-3-4-2027/production/7432404?showDetails=VB17184453406&qty=2",
+   "checked": "2026-10-21"
+  },
+  "2027-03-08": {
+   "price": 328,
+   "sec": "224",
+   "row": 2,
+   "n": 3,
+   "listing": "VB17601121446",
+   "url": "https://www.vividseats.com/philadelphia-76ers-tickets-xfinity-mobile-arena-3-8-2027/production/7431799?showDetails=VB17601121446&qty=2",
+   "checked": "2026-10-21"
+  },
+  "2027-03-15": {
+   "price": 189,
+   "sec": "224",
+   "row": 2,
+   "n": 5,
+   "listing": "VB17537249568",
+   "url": "https://www.vividseats.com/philadelphia-76ers-tickets-xfinity-mobile-arena-3-15-2027/production/7432635?showDetails=VB17537249568&qty=2",
+   "checked": "2026-10-21"
   }
  }
 }

@@ -348,6 +348,24 @@ export function applyComps(games, prices) {
   }
 }
 
+// A comp from a thin or wildly high listing would set a silly price. Compare each comp's ratio to
+// the arena's cheapest ticket against the typical ratio; set aside ones that are far off.
+export function guardComps(games, prices) {
+  const withLow = games.filter(g => g.comp != null && market(prices, g)?.low);
+  const ratios = withLow.map(g => g.comp / market(prices, g).low);
+  const typical = median(ratios);
+  if (!typical) return typical;
+  for (const g of withLow) {
+    const r = g.comp / market(prices, g).low;
+    const thin = g.compN != null && g.compN < 3;
+    if (r > typical * 2 || (thin && r > typical * 1.5)) {
+      g.compIgnored = { price: g.comp, url: g.compUrl, note: g.compNote, n: g.compN, ratio: r, typical };
+      Object.assign(g, { comp: null, compUrl: '', compNote: '', compN: null });
+    }
+  }
+  return typical;
+}
+
 // --- Selling tranches ------------------------------------------------------------
 // The season is sold in batches. Each tranche has a decision date a few weeks before
 // its first game, so every game we sell still gets its full Stretch window.

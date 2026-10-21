@@ -508,3 +508,4 @@ a.comp-link:hover { text-decoration: underline; }
 .photo-row { display: flex; align-items: center; gap: 12px; padding: 8px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
 .photo-row img { width: 112px; height: 68px; object-fit: cover; border-radius: 8px; flex: none; }
 .photo-row.off img { opacity: .35; filter: grayscale(1); }
+.comp-link.ignored { color: var(--muted); text-decoration: line-through; }

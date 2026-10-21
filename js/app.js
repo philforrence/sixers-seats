@@ -6,7 +6,7 @@ import { team, TEAM_NAMES } from './teams.js';
 import { TYPES, VARIANTS, buildMessage, defaultHook, splitEmail, firstName } from './messages.js';
 import {
   status, STATUS_LABEL, isPast, daysUntil, startTime, holders, estimate, trend, seatMultiplier, market,
-  netPayout, feePct, ledger, money, PLATFORMS, setSeatCount, parseDate, STEPS, ladder, floorPrice, hoursUntil, FRIEND, applyComps, tranches, trancheOf, friendPrice, ffPrice, windowOf, WINDOW_LABEL, saleDone, received,
+  netPayout, feePct, ledger, money, PLATFORMS, setSeatCount, parseDate, STEPS, ladder, floorPrice, hoursUntil, FRIEND, applyComps, guardComps, tranches, trancheOf, friendPrice, ffPrice, windowOf, WINDOW_LABEL, saleDone, received,
 } from './model.js';
 
 const [P1, P2] = CONFIG.PARTNERS;
@@ -66,6 +66,7 @@ async function loadAll() {
     const baselines = DEMO ? Object.fromEntries(games.map(g => [g.id, g.baseline || 100])) : undefined;
     state.prices = await loadPrices({ demo: DEMO, baselines });
     applyComps(state.games, state.prices);
+    guardComps(state.games, state.prices);
     await migrate();
     try { const r = await fetch('data/hooks.json', { cache: 'no-cache' }); if (r.ok) state.hooks = await r.json(); } catch {}
     try { state.contacts = await store.loadContacts(state.user.name); } catch (e) { console.warn('contacts', e); }
@@ -317,6 +318,10 @@ function compCell(g) {
     const href = g.compUrl || g.compSearch;
     return href ? `<a class="comp-link" href="${esc(href)}" target="_blank" rel="noopener" title="${esc(title)}">${money(g.comp)}<span aria-hidden="true">↗</span></a>${thin}`
       : `<span class="comp-link" title="${esc(title)}">${money(g.comp)}</span>${thin}`;
+  }
+  if (g.compIgnored) {
+    const x = g.compIgnored;
+    return `<a class="comp-link ignored" href="${esc(x.url || g.compSearch)}" target="_blank" rel="noopener" title="${esc(`${x.note} · only ${x.n} similar listing${x.n === 1 ? '' : 's'} · ${x.ratio.toFixed(1)}× the cheapest ticket (typical is ${x.typical.toFixed(1)}×), so the estimate is used instead`)}">${money(x.price)}<span aria-hidden="true">↗</span></a><span class="thin">not used</span>`;
   }
   return g.compSearch ? `<a class="comp-find" href="${esc(g.compSearch)}" target="_blank" rel="noopener" title="No comp checked yet — open this game on Vivid Seats">find ↗</a>` : '<span class="muted">—</span>';
 }
