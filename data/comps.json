@@ -1,5 +1,5 @@
 {
- "checked": "2026-10-21T16:00:00Z",
+ "checked": "2026-10-21T22:00:00Z",
  "source": "Vivid Seats",
  "rule": "Cheapest pair (2+ tickets) in rows 1-3 of sections 201, 202, 203, 223, 224. Prices include fees.",
  "games": {
@@ -316,6 +316,51 @@
    "n": 5,
    "listing": "VB17537249568",
    "url": "https://www.vividseats.com/philadelphia-76ers-tickets-xfinity-mobile-arena-3-15-2027/production/7432635?showDetails=VB17537249568&qty=2",
+   "checked": "2026-10-21"
+  },
+  "2027-03-17": {
+   "price": 397,
+   "sec": "224",
+   "row": 2,
+   "n": 1,
+   "listing": "VB17608870067",
+   "url": "https://www.vividseats.com/philadelphia-76ers-tickets-xfinity-mobile-arena-3-17-2027/production/7432194?showDetails=VB17608870067&qty=2",
+   "checked": "2026-10-21"
+  },
+  "2027-03-21": {
+   "price": 369,
+   "sec": "223",
+   "row": 1,
+   "n": 6,
+   "listing": "VB17601839349",
+   "url": "https://www.vividseats.com/philadelphia-76ers-tickets-xfinity-mobile-arena-3-21-2027/production/7432639?showDetails=VB17601839349&qty=2",
+   "checked": "2026-10-21"
+  },
+  "2027-03-31": {
+   "price": 402,
+   "sec": "224",
+   "row": 2,
+   "n": 4,
+   "listing": "VB17537249090",
+   "url": "https://www.vividseats.com/philadelphia-76ers-tickets-xfinity-mobile-arena-3-31-2027/production/7431345?showDetails=VB17537249090&qty=2",
+   "checked": "2026-10-21"
+  },
+  "2027-04-04": {
+   "price": 318,
+   "sec": "224",
+   "row": 3,
+   "n": 2,
+   "listing": "VB17601803787",
+   "url": "https://www.vividseats.com/philadelphia-76ers-tickets-xfinity-mobile-arena-4-4-2027/production/7432647?showDetails=VB17601803787&qty=2",
+   "checked": "2026-10-21"
+  },
+  "2027-04-11": {
+   "price": 276,
+   "sec": "203",
+   "row": 3,
+   "n": 2,
+   "listing": "VB17307297739",
+   "url": "https://www.vividseats.com/philadelphia-76ers-tickets-xfinity-mobile-arena-4-11-2027/production/7432657?showDetails=VB17307297739&qty=2",
    "checked": "2026-10-21"
   }
  }
