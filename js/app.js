@@ -295,7 +295,7 @@ const autoPayout = g => netPayout(g.soldPrice, g.qtySold || seatCount(), feePct(
 const cash = n => money(n, Number.isInteger(n) ? 0 : 2);
 const cents = n => n == null ? null : Number.isInteger(n) ? n : n.toFixed(2);
 const payoutIn = g => moneyIn(g, 'payout', cents(g.payout), cents(Math.round(autoPayout(g) * 100) / 100), `wide ${g.payout != null ? 'set' : ''}`, 'Payout amount');
-const tmResales = () => state.games.filter(g => g.platform === 'Ticketmaster' && (g.listPrice != null || g.soldPrice != null)).length;
+const tmResales = () => state.games.filter(g => g.platform === 'Ticketmaster' && (g.soldPrice != null || (g.plan === 'sell' && g.listPrice != null))).length;
 
 const gameCell = (g, tip) => `<button class="game-cell" data-open="${g.id}"${tip ? ` data-tip="${esc(tip)}"` : ''}>${logo(g, 22)}<b>${team(g.opp).abbr}</b><span><i class="wd">${fmtDate(g, { weekday: 'short' })} </i>${fmtDate(g, { month: 'numeric', day: 'numeric' })}</span></button>`;
 const sellGames = () => state.games.filter(g => state.showPast || !isPast(g));
@@ -638,7 +638,7 @@ function saleModal() {
   const F = state.saleForm;
   if (!F) return '';
   const names = (state.contacts || []).map(c => c.name);
-  const games = state.games.filter(g => !isPast(g) || g.soldPrice != null);
+  const games = state.games;
   const title = state.games.find(x => x.id === F.id)?.soldPrice != null ? 'Edit sale' : 'Log a sale';
   return `<div class="scrim" data-act="sclose"></div>
   <div class="modal small-modal" role="dialog" aria-modal="true" aria-label="${title}">
@@ -693,6 +693,33 @@ function thermos(compact = false) {
   </div>`;
 }
 
+// Evening up: every sale is split 50/50, so whoever holds more of the payouts sends the other half the difference.
+// Money already sent between the two of you is kept in App Settings as "date|from|to|amount; ...".
+const settleUps = () => String(state.settings.settleUps || '').split(';').map(x => x.trim()).filter(Boolean)
+  .map(x => { const [date, from, to, amount] = x.split('|'); return { date, from, to, amount: Number(amount) || 0 }; });
+function evenUp(sales) {
+  const S = state.settings, r2 = n => Math.round(n * 100) / 100;
+  const got = (p, list) => list.filter(g => g.paidTo === p).reduce((a, g) => a + received(g, S), 0);
+  const sent = settleUps().reduce((a, t) => a + (t.from === P2 && t.to === P1 ? t.amount : t.from === P1 && t.to === P2 ? -t.amount : 0), 0);
+  const bal = list => r2((got(P2, list) - got(P1, list)) / 2 - sent); // > 0: P2 owes P1
+  const all = bal(sales), landed = bal(sales.filter(g => g.paid));
+  return { all, landed, from: all > 0 ? P2 : P1, to: all > 0 ? P1 : P2, amount: Math.abs(all) };
+}
+function evenUpCard(sales) {
+  const E = evenUp(sales), last = settleUps().at(-1), who = p => `<b class="who-${p === P1 ? 'p1' : 'p2'}">${esc(p)}</b>`;
+  const lastLine = last ? `<p class="muted small">Last time: ${esc(last.from)} sent ${esc(last.to)} ${money(last.amount, 2)}${last.date ? ` on ${dShort(new Date(last.date + 'T12:00'))}` : ''} · <button class="link small" data-act="evenundo">Undo</button></p>` : '';
+  if (E.amount < 0.01) return `<section class="card even-up"><p class="even-line">You're even. 🤝</p>${lastLine}</section>`;
+  const partial = Math.sign(E.landed) === Math.sign(E.all) && Math.abs(E.landed - E.all) >= 0.01
+    ? `<p class="muted small">${money(Math.abs(E.landed), 2)} of it is from money that's already in. The rest comes from payouts still on the way.</p>` : '';
+  return `<section class="card even-up">
+    <p class="eyebrow">To split the sales 50/50</p>
+    <p class="even-line">${who(E.from)} sends ${who(E.to)} <span class="big-num">${money(E.amount, 2)}</span></p>
+    ${partial}
+    <div class="list-actions"><button class="btn small" data-act="evenpaid">Mark it paid</button></div>
+    ${lastLine}
+  </section>`;
+}
+
 function payoutsView() {
   const S = state.settings;
   const sales = state.games.filter(g => g.soldPrice != null).sort((a, b) => a.dateObj - b.dateObj);
@@ -708,6 +735,7 @@ function payoutsView() {
   <div class="view-head"><h1>Payouts</h1><button class="btn" data-act="saleadd">Log a sale</button></div>
   ${thermos()}
   <div class="payees">${CONFIG.PARTNERS.map(person).join('')}</div>
+  ${sales.length ? evenUpCard(sales) : ''}
   ${nobody.length ? `<p class="warn-t small">${nobody.length} sale${nobody.length === 1 ? ' doesn\'t' : 's don\'t'} say who got paid out yet. Tap ${esc(P1)} or ${esc(P2)} on the line.</p>` : ''}
   <section class="card">
     <h2>Who's gotten what</h2>
@@ -1440,6 +1468,16 @@ async function action(act, arg) {
       openSale(pg, { buyer: c?.name || '', qty: P.variant === 'come' ? 1 : 2, price: P.variant === 'standard' ? pr.friend : pr.ff });
       return renderModal();
     }
+    case 'evenpaid': {
+      const E = evenUp(state.games.filter(x => x.soldPrice != null));
+      if (E.amount < 0.01 || !confirm(`Log that ${E.from} sent ${E.to} ${money(E.amount, 2)}?`)) return;
+      return saveSettleUps([...settleUps(), { date: new Date().toLocaleDateString('en-CA'), from: E.from, to: E.to, amount: E.amount }], `Logged: ${E.from} sent ${E.to} ${money(E.amount, 2)}`);
+    }
+    case 'evenundo': {
+      const list = settleUps(), last = list.at(-1);
+      if (!last || !confirm(`Undo "${last.from} sent ${last.to} ${money(last.amount, 2)}"?`)) return;
+      return saveSettleUps(list.slice(0, -1), 'Undone');
+    }
     case 'saleadd': { const first = state.games.find(x => !isPast(x) && x.plan === 'sell' && x.soldPrice == null) || state.games.find(x => !isPast(x)); openSale(first); return renderModal(); }
     case 'saleedit': openSale(state.games.find(x => x.id === arg)); return renderModal();
     case 'sclose': state.saleForm = null; return render();
@@ -1557,6 +1595,14 @@ function onPitchChange(el) {
     if (P.dirty) P.text = P.text.replace(/^((?:Subject:[^\n]*\n+)?)Hey(?: [^,!—\n]+)?/, `$1Hey${firstName(c?.name) ? ' ' + firstName(c.name) : ''}`);
   } else if (k === 'text') return;
   renderModal();
+}
+
+async function saveSettleUps(list, msg) {
+  const before = state.settings.settleUps;
+  state.settings.settleUps = list.map(t => [t.date, t.from, t.to, t.amount].join('|')).join('; ');
+  try { await store.saveSettings(state.settings); toast(msg); }
+  catch (e) { state.settings.settleUps = before; toast('Save failed: ' + e.message); }
+  render();
 }
 
 async function saveSale() {

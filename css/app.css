@@ -525,6 +525,10 @@ a.comp-link:hover { text-decoration: underline; }
 .payee.p2 { border-left-color: var(--p2); }
 .payee .val { font-family: var(--display); font-size: 28px; font-weight: 700; }
 .sheet tfoot td { border-top: 2px solid var(--line); font-size: 14px; }
+.even-up { text-align: center; padding: 18px 20px; }
+.even-up .even-line { font-size: 18px; margin: 6px 0; }
+.even-up .big-num { display: inline-block; margin-left: 6px; font-family: var(--display); font-size: 30px; font-weight: 700; color: var(--accent); vertical-align: -3px; }
+.even-up .list-actions { justify-content: center; }
 
 /* ---------- Popovers and the slim Sell table */
 #tip { position: fixed; z-index: 60; left: -9999px; top: 0; max-width: min(300px, calc(100vw - 16px)); padding: 9px 12px; border-radius: 10px; background: var(--surface); color: var(--text); border: 1px solid var(--line); box-shadow: 0 8px 28px rgba(0,0,0,.28); font-size: 13px; line-height: 1.45; text-transform: none; letter-spacing: 0; font-weight: 400; white-space: normal; opacity: 0; pointer-events: none; transition: opacity .12s; }

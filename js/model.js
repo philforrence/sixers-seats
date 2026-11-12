@@ -22,6 +22,7 @@ export const DEFAULT_SETTINGS = {
   trancheDecideWeeks: 4,  // decide on a tranche this many weeks before its first game
   trancheDeadlines: '2026-11-01,,',   // optional fixed decide-by date per tranche (blank = automatic)
   ffDiscount: 20,         // friends & family discount, % off the friend price
+  settleUps: '',          // money sent between the two to even out sales: 'date|from|to|amount; ...'
   revenueTarget: 8000,    // what both seats cost for the season
   settingsVersion: 0,
 };
