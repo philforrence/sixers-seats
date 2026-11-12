@@ -365,7 +365,8 @@ function assign(g, choice) {
     if (!confirm(`Undo the ${team(g.opp).abbr} ${fmtDate(g, { month: 'numeric', day: 'numeric' })} sale?`)) { render(); return false; }
     clearSale(g);
   }
-  const guest = holders(g).find(x => x !== P1 && x !== P2) || 'Guest';
+  // A guest is a holder who isn't one of us; skip sheet notes like "Andrew used" too.
+  const guest = holders(g).find(x => !CONFIG.PARTNERS.some(p => x.includes(p))) || 'Guest';
   const today = new Date().toLocaleDateString('en-CA');
   if (choice === 'both') Object.assign(g, { plan: 'use', seats: [P1, P2] });
   else if (choice === 'p1') Object.assign(g, { plan: 'use', seats: [P1, guest] });
