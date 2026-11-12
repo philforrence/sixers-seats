@@ -59,8 +59,18 @@ function sheetValues(g) {
   };
 }
 
+// Merging: each game remembers what its row looked like when this tab last read or wrote it.
+// A save writes only the fields this tab changed since then and keeps everything else as it is
+// in the sheet now, so a tab left open for hours can't undo someone else's newer edits.
+const MERGE_COLS = APP_COLS.filter(k => k !== 'updatedBy' && k !== 'updatedAt');
+const norm = v => v == null ? '' : String(v);
+const appSnap = g => { const av = appValues(g, ''); return Object.fromEntries(MERGE_COLS.map(k => [k, norm(av[k])])); };
+const homeSnap = g => { const sv = sheetValues(g); return Object.fromEntries(WRITABLE.map(k => [k, norm(sv[k])])); };
+export const remember = g => { g._base = { app: appSnap(g), home: homeSnap(g) }; };
+const SEAT_COLS = ['seat1', 'seat2', 'seat3', 'seat4'];
+
 export class SheetStore {
-  constructor() { this.cols = {}; this.appRows = 0; this.lastSheetRow = 0; }
+  constructor() { this.cols = {}; this.appRows = 0; this.lastSheetRow = 0; this.queue = new Map(); this.settingsBase = null; }
 
   async api(path, { method = 'GET', body } = {}) {
     const t = auth.token();
@@ -138,28 +148,97 @@ export class SheetStore {
       if (known.has(date) || !/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(date)) continue;
       games.push(makeGame({ date, opp: a.opponent, time: a.time || '7:00 PM', doing: '', price: '' }, a));
     }
+    games.forEach(remember);
+    this.settingsBase = Object.fromEntries(Object.entries(settings).map(([k, v]) => [k, norm(v)]));
     return { games, settings };
   }
 
-  async saveGame(g, who) {
-    const data = [];
-    if (g.sheetRow) {
-      const sv = sheetValues(g);
-      for (const k of WRITABLE) {
-        const c = this.cols[k];
-        if (c >= 0) data.push({ range: `${q(CONFIG.GAMES_TAB)}!${colLetter(c)}${g.sheetRow}`, values: [[sv[k]]] });
-      }
-    }
-    const av = appValues(g, who);
-    if (!g.appRow) g.appRow = ++this.appRows;
-    data.push({ range: `${q(CONFIG.APP_TAB)}!A${g.appRow}:${colLetter(APP_COLS.length - 1)}${g.appRow}`, values: [APP_COLS.map(k => av[k])] });
-    await this.api('/values:batchUpdate', { method: 'POST', body: { valueInputOption: 'USER_ENTERED', data } });
-    g.updatedBy = who; g.updatedAt = av.updatedAt;
+  // One save at a time per game, so two quick edits can't both add a new row.
+  saveGame(g, who) {
+    const prev = this.queue.get(g.id) || Promise.resolve();
+    const next = prev.catch(() => {}).then(() => this.mergeSave(g, who));
+    this.queue.set(g.id, next);
+    return next;
   }
 
+  // Returns { theirs: [fields taken from the sheet], by: who saved them } so the app can say so.
+  async mergeSave(g, who) {
+    const base = g._base || null;
+    const ranges = [`${q(CONFIG.APP_TAB)}!A1:${colLetter(APP_COLS.length - 1)}${Math.max(300, this.appRows + 50)}`];
+    if (g.sheetRow) ranges.push(`${q(CONFIG.GAMES_TAB)}!A${g.sheetRow}:Z${g.sheetRow}`);
+    const res = await this.api(`/values:batchGet?${ranges.map(r => 'ranges=' + encodeURIComponent(r)).join('&')}&valueRenderOption=FORMATTED_VALUE`);
+    const [appV, homeV] = res.valueRanges.map(v => v.values || []);
+    this.appRows = Math.max(1, appV.length);
+    const idx = appV.findLastIndex((r, i) => i > 0 && r[0] === g.date);
+    const fresh = idx > 0 ? Object.fromEntries(APP_COLS.map((k, j) => [k, appV[idx][j] ?? ''])) : null;
+    const theirs = [];
+
+    // App Data: our changed fields win; the rest come from the sheet as it is now.
+    const local = appValues(g, who);
+    const mine = k => !base || norm(local[k]) !== base.app[k];
+    const row = { ...local };
+    if (fresh) for (const k of MERGE_COLS) if (!mine(k) && norm(fresh[k]) !== norm(local[k])) { row[k] = fresh[k]; theirs.push(k); }
+    if (theirs.length) {
+      const m = makeGame({ date: g.date, opp: g.opp, time: g.time, doing: '', phil: '', andrew: '', wantSell: '', decided: '', note: '', price: '' }, row);
+      for (const k of theirs) {
+        if (SEAT_COLS.includes(k)) g.seats = m.seats;
+        else if (k in m && k !== 'date' && k !== 'opponent') g[k] = m[k];
+      }
+    }
+
+    // Home Games: interest and notes merge the same way. Status text is written only when this tab changed it.
+    const data = [];
+    if (g.sheetRow) {
+      const homeRow = homeV?.[0] || [];
+      const cell = k => this.cols[k] >= 0 ? norm(homeRow[this.cols[k]]) : '';
+      const before = homeSnap(g);
+      for (const [k, who_] of [['phil', CONFIG.PARTNERS[0]], ['andrew', CONFIG.PARTNERS[1]]]) {
+        const ours = !base || before[k] !== base.home[k];
+        if (!ours && cell(k) && cell(k).toUpperCase() !== before[k]) { g.interest[who_] = /^true$/i.test(cell(k)); theirs.push(k); }
+      }
+      if (base && before.note === base.home.note && cell('note') !== before.note) { g.note = cell('note'); theirs.push('note'); }
+      const sv = homeSnap(g);
+      for (const k of WRITABLE) {
+        const c = this.cols[k];
+        if (c < 0) continue;
+        if (base && sv[k] === base.home[k]) continue;          // unchanged here: leave the sheet's value
+        if (cell(k) === sv[k]) continue;                        // already says this
+        data.push({ range: `${q(CONFIG.GAMES_TAB)}!${colLetter(c)}${g.sheetRow}`, values: [[sv[k]]] });
+      }
+    }
+
+    const values = [APP_COLS.map(k => row[k])];
+    if (idx > 0) {
+      g.appRow = idx + 1;
+      data.push({ range: `${q(CONFIG.APP_TAB)}!A${g.appRow}:${colLetter(APP_COLS.length - 1)}${g.appRow}`, values });
+    } else {
+      // A new row goes after the last one in the sheet now, not a row number this tab guessed earlier.
+      const r = await this.api(`/values/${encodeURIComponent(`${q(CONFIG.APP_TAB)}!A1`)}:append?valueInputOption=USER_ENTERED&insertDataOption=OVERWRITE`, { method: 'POST', body: { values } });
+      const m = /![A-Z]+(\d+)/.exec(r.updates?.updatedRange || '');
+      g.appRow = m ? Number(m[1]) : ++this.appRows;
+      this.appRows = Math.max(this.appRows, g.appRow);
+    }
+    if (data.length) await this.api('/values:batchUpdate', { method: 'POST', body: { valueInputOption: 'USER_ENTERED', data } });
+    g.updatedBy = who; g.updatedAt = local.updatedAt;
+    remember(g);
+    return { theirs, by: fresh?.updatedBy || '' };
+  }
+
+  // Same idea for settings: keys this tab changed win, everything else is taken from the sheet.
+  // Updates `settings` in place and returns the keys that came from someone else.
   async saveSettings(settings) {
+    const res = await this.api(`/values/${encodeURIComponent(`${q(CONFIG.SETTINGS_TAB)}!A1:B100`)}`);
+    const fresh = {};
+    (res.values || []).slice(1).forEach(([k, v]) => { if (k) fresh[k] = v ?? ''; });
+    const base = this.settingsBase, theirs = [];
+    if (base) for (const [k, v] of Object.entries(fresh)) {
+      const ours = norm(settings[k]) !== (k in base ? base[k] : norm(DEFAULT_SETTINGS[k]));
+      if (!ours && norm(v) !== norm(settings[k])) { settings[k] = v; theirs.push(k); }
+    }
     const rows = [['Setting', 'Value'], ...Object.entries(settings).map(([k, v]) => [k, v ?? ''])];
     await this.api(`/values/${encodeURIComponent(`${q(CONFIG.SETTINGS_TAB)}!A1:B${rows.length}`)}?valueInputOption=RAW`, { method: 'PUT', body: { values: rows } });
+    this.settingsBase = Object.fromEntries(Object.entries(settings).map(([k, v]) => [k, norm(v)]));
+    return theirs;
   }
 
   async loadContacts(owner) {

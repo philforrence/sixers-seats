@@ -64,6 +64,7 @@ async function loadAll() {
     const { games, settings } = await store.load();
     state.games = games.sort((a, b) => a.dateObj - b.dateObj);
     state.settings = settings;
+    state.loadedAt = Date.now();
     setSeatCount(settings.seatCount);
     render();
     const baselines = DEMO ? Object.fromEntries(games.map(g => [g.id, g.baseline || 100])) : undefined;
@@ -87,8 +88,12 @@ async function persist(g) {
   g._saving = true;
   renderDrawerStatus(g);
   try {
-    await store.saveGame(g, state.user.name);
+    const r = await store.saveGame(g, state.user.name);
     g._saving = false; g._saved = Date.now();
+    if (r?.theirs?.length) {
+      toast(`Merged with newer changes ${r.by && r.by !== state.user.name ? `from ${r.by}` : 'from your other tab'}`);
+      renderKeepFocus();
+    }
   } catch (e) {
     g._saving = false;
     if (e instanceof AuthError) {
@@ -101,15 +106,40 @@ async function persist(g) {
 const debounced = new Map();
 function persistSoon(g, ms = 600) {
   clearTimeout(debounced.get(g.id));
-  debounced.set(g.id, setTimeout(() => persist(g), ms));
+  debounced.set(g.id, setTimeout(() => { debounced.delete(g.id); persist(g); }, ms));
 }
+
+// A tab left open goes stale. Reload the data when you come back to it, unless you're mid-edit.
+// (Saves merge with the sheet either way; this keeps what you see current.)
+const STALE_MS = 60e3;
+const busy = () => state.saleForm || state.pitch || debounced.size || state.games?.some(g => g._saving)
+  || document.activeElement?.matches?.('input, textarea, select');
+async function refreshData(force = false) {
+  if (DEMO || !state.user || state.loading || !state.games?.length || (!force && busy())) return false;
+  try {
+    const { games, settings } = await store.load();
+    if (!force && busy()) return false;
+    state.games = games.sort((a, b) => a.dateObj - b.dateObj);
+    state.settings = settings;
+    state.loadedAt = Date.now();
+    setSeatCount(settings.seatCount);
+    if (state.prices) { applyComps(state.games, state.prices); guardComps(state.games, state.prices); }
+    state.mult = seatMultiplier(state.games, state.prices, state.settings);
+  } catch (e) { if (!(e instanceof AuthError)) console.warn('refresh', e); return false; }
+  render();
+  return true;
+}
+const refreshIfStale = () => { if (document.visibilityState === 'visible' && Date.now() - (state.loadedAt || 0) > STALE_MS) refreshData(); };
+document.addEventListener('visibilitychange', refreshIfStale);
+window.addEventListener('focus', refreshIfStale);
+setInterval(refreshIfStale, 5 * 60e3);
 
 async function saveSettings() {
   try {
-    await store.saveSettings(state.settings);
+    const theirs = await store.saveSettings(state.settings);
     setSeatCount(state.settings.seatCount);
     state.mult = seatMultiplier(state.games, state.prices, state.settings);
-    toast('Settings saved');
+    toast(theirs?.length ? 'Settings saved, merged with newer changes' : 'Settings saved');
   } catch (e) { toast('Save failed: ' + e.message); }
   render();
 }
@@ -1470,11 +1500,13 @@ async function action(act, arg) {
       return renderModal();
     }
     case 'evenpaid': {
+      await refreshData(true);
       const E = evenUp(state.games.filter(x => x.soldPrice != null));
       if (E.amount < 0.01 || !confirm(`Log that ${E.from} sent ${E.to} ${money(E.amount, 2)}?`)) return;
       return saveSettleUps([...settleUps(), { date: new Date().toLocaleDateString('en-CA'), from: E.from, to: E.to, amount: E.amount }], `Logged: ${E.from} sent ${E.to} ${money(E.amount, 2)}`);
     }
     case 'evenundo': {
+      await refreshData(true);
       const list = settleUps(), last = list.at(-1);
       if (!last || !confirm(`Undo "${last.from} sent ${last.to} ${money(last.amount, 2)}"?`)) return;
       return saveSettleUps(list.slice(0, -1), 'Undone');
